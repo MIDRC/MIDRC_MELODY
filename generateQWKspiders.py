@@ -4,6 +4,7 @@ from sklearn.metrics import cohen_kappa_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.utils import resample
+from tqdm import tqdm
 
 
 # Step 1: Read data
@@ -68,10 +69,10 @@ def calculate_kappas_and_intervals(df, ai_cols, n_iter=1000):
     kappas = {}
     intervals = {}
     y_true = df['truth']
-    y_true_np = np.array(y_true.tolist(), dtype=np.int)
+    y_true_np = np.array(y_true.tolist(), dtype=int)
     for col in ai_cols:
         y_pred = df[col]
-        y_pred_np = np.array(y_pred.tolist(), dtype=np.int)
+        y_pred_np = np.array(y_pred.tolist(), dtype=int)
         kappa = cohen_kappa_score(y_true_np, y_pred_np, weights='quadratic')
         kappas[col] = kappa
 
@@ -100,14 +101,15 @@ def bootstrap_kappa(df, model, n_iter=1000):
 def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1000):
     delta_kappas = {}
 
-    for category in categories:
+    for category in tqdm(categories, desc='Categories', position=0):
         delta_kappas[category] = {model: {} for model in ai_columns}
+        unique_values = df[category].unique()
 
-        for value in df[category].unique():
+        for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
             if value == reference_groups[category]:
                 continue
 
-            for model in ai_columns:
+            for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
                 condition = df[category] == value
                 filtered_df = df[condition]
 
@@ -117,9 +119,8 @@ def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1
                 kappas = bootstrap_kappa(filtered_df, model, n_iter)
                 kappas_ref = bootstrap_kappa(ref_filtered_df, model, n_iter)
                 deltas = [a - b for a, b in zip(kappas, kappas_ref)]
-                delta_median=np.percentile(deltas, [50])
-                (lower_value, upper_value) = np.percentile(deltas, [2.5, 97.5])
-
+                delta_median = np.percentile(deltas, 50)
+                lower_value, upper_value = np.percentile(deltas, [2.5, 97.5])
                 delta_kappas[category][model][value] = (delta_median, (lower_value, upper_value))
 
     return delta_kappas
@@ -212,8 +213,8 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
 
 
 # Main execution
-file1 = '../test_truthNdemographics.csv'
-file2 = '../test_scores.csv'
+file1 = 'test_truthNdemographics.csv'
+file2 = 'test_scores.csv'
 df1, df2 = read_data(file1, file2)
 
 categories = determine_categories(df1)
@@ -233,7 +234,7 @@ ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
 
 kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
 print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
-print(f"Bootstrapping delta Kappas, this may take a while")
+print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
 delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
 #print(f"Delta Kappas: {delta_kappas}")
 
