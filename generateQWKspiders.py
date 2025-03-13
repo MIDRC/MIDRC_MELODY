@@ -213,48 +213,49 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
 
 
 # Main execution
-file1 = 'test_truthNdemographics.csv'
-file2 = 'test_scores.csv'
-df1, df2 = read_data(file1, file2)
+if __name__ == '__main__':
+    file1 = 'test_truthNdemographics.csv'
+    file2 = 'test_scores.csv'
+    df1, df2 = read_data(file1, file2)
 
-categories = determine_categories(df1)
+    categories = determine_categories(df1)
 
-# Bin numerical columns, specifically 'age'
-bins_config = {
-    **age_bins,
-}
+    # Bin numerical columns, specifically 'age'
+    bins_config = {
+        **age_bins,
+    }
 
-df1 = bin_data(df1, bins_config)
-matched_df = match_cases(df1, df2)
+    df1 = bin_data(df1, bins_config)
+    matched_df = match_cases(df1, df2)
 
-reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
+    reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
 
-# Determine AI columns (excluding 'case_name' and 'truth')
-ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
+    # Determine AI columns (excluding 'case_name' and 'truth')
+    ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
 
-kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
-print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
-print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
-delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
-#print(f"Delta Kappas: {delta_kappas}")
+    kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
+    print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
+    print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
+    delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
+    #print(f"Delta Kappas: {delta_kappas}")
 
-ai_models = extract_ai_models(delta_kappas) # in case some of the ai_cols were inconsistent
+    ai_models = extract_ai_models(delta_kappas) # in case some of the ai_cols were inconsistent
 
-# Determine the global range across all models for consistent scaling
-all_values = []
-all_lower = []
-all_upper = []
+    # Determine the global range across all models for consistent scaling
+    all_values = []
+    all_lower = []
+    all_upper = []
 
-for model in ai_models:
-    _, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
-    all_values.extend(values)
-    all_lower.extend(lower_bounds)
-    all_upper.extend(upper_bounds)
+    for model in ai_models:
+        _, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
+        all_values.extend(values)
+        all_lower.extend(lower_bounds)
+        all_upper.extend(upper_bounds)
 
-global_min = min(all_lower) - 0.05  # Padding for better visualization
-global_max = max(all_upper) + 0.05
+    global_min = min(all_lower) - 0.05  # Padding for better visualization
+    global_max = max(all_upper) + 0.05
 
-# Plot for each AI model
-for model in ai_models:
-    groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
-    plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max)
+    # Plot for each AI model
+    for model in ai_models:
+        groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
+        plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max)
