@@ -10,8 +10,8 @@ numeric_cols:
 
 spider_plot:
   custom_orders:
-    'age': [ '18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+' ],
-    'sex': [ 'Male', 'Female' ],
-    'race': [ 'White', 'Black or African American', 'Asian', 'Other' ],
-    'ethnicity': [ 'Hispanic or Latino', 'Not Hispanic or Latino' ],
-    'intersectional_race_ethnicity': [ 'White and Not Hispanic or Latino', 'Not White or HisapanicLatino' ]
+    age_binned: [ '18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+' ]
+    sex: [ 'Male', 'Female' ]
+    race: [ 'White', 'Black or African American', 'Asian', 'Other' ]
+    ethnicity: [ 'Hispanic or Latino', 'Not Hispanic or Latino' ]
+    intersectional_race_ethnicity: [ 'White and Not Hispanic or Latino', 'Not White or HisapanicLatino' ]

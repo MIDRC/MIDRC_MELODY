@@ -1,3 +1,6 @@
+import pickle
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -15,8 +18,8 @@ def bin_data(df, bins_config):
     return df
 
 # Step 4: Match case names between file1 and file2
-def match_cases(df1, df2):
-    merged_df = df1.merge(df2, on='case_name', how='inner', suffixes=('_truth', '_ai'))
+def match_cases(df1, df2, column='case_name'):
+    merged_df = df1.merge(df2, on=column, how='inner', suffixes=('_truth', '_ai'))
     return merged_df
 
 # CDC age bin configuration
@@ -202,44 +205,28 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
     plt.show()
 
 
-# Main execution
-if __name__ == '__main__':
-    # Load configuration
-    with open('config.yaml', 'r', encoding='utf-8') as stream:
-        config = yaml.load(stream, Loader=yaml.CLoader)
+def create_matched_df_from_files(input_data, numeric_cols_dict, column='case_name'):
+    df1 = pd.read_csv(input_data['file1'])
+    df2 = pd.read_csv(input_data['file2'])
 
-    # Open Files
-    df1 = pd.read_csv(config['input data']['file1'])
-    df2 = pd.read_csv(config['input data']['file2'])
-
-    # Determine Categories
     categories = df1.columns[2:]
 
     # Bin numerical columns, specifically 'age'
     numeric_cols = config['numeric_cols']
-    for str_col, col_dict in numeric_cols.items():
+    for str_col, col_dict in numeric_cols_dict.items():
         num_col = col_dict['raw column'] if 'raw column' in col_dict else str_col
         bins = col_dict['bins'] if 'bins' in col_dict else None
         labels = col_dict['labels'] if 'labels' in col_dict else None
 
-        if num_col in df.columns:
-            df = bin_dataframe_column(df, num_col, str_col, bins=bins, labels=labels)
-            categories.replace(num_col, str_col, inplace=True)
+        if num_col in df1.columns:
+            df1 = bin_dataframe_column(df1, num_col, str_col, bins=bins, labels=labels)
+            categories = categories.map(lambda x: str_col if x == num_col else x)
 
-    matched_df = match_cases(df1, df2)
+    return match_cases(df1, df2, column), categories
 
-    reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
 
-    # Determine AI columns (excluding 'case_name' and 'truth')
-    ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
-
-    kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
-    print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
-    print(f"Bootstrapping delta Kappas, this may take a while")
-    delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
-    #print(f"Delta Kappas: {delta_kappas}")
-
-    ai_models = extract_ai_models(delta_kappas) # in case some of the ai_cols were inconsistent
+def generate_plots_from_delta_kappas(delta_kappas):
+    ai_models = extract_ai_models(delta_kappas)  # in case some of the ai_cols were inconsistent
 
     # Determine the global range across all models for consistent scaling
     all_values = []
@@ -259,3 +246,31 @@ if __name__ == '__main__':
     for model in ai_models:
         groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
         plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max)
+
+
+# Main execution
+if __name__ == '__main__':
+    # Load configuration
+    with open('config.yaml', 'r', encoding='utf-8') as stream:
+        config = yaml.load(stream, Loader=yaml.CLoader)
+
+    matched_df, categories = create_matched_df_from_files(config['input data'], config['numeric_cols'])
+
+    reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
+
+    # Determine AI columns (excluding 'case_name' and 'truth')
+    ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
+
+    kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
+    print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
+
+    # Calculate delta Kappas
+    print(f"Bootstrapping delta Kappas, this may take a while")
+    delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
+    #print(f"Delta Kappas: {delta_kappas}")
+
+    filename = f"delta_kappas_rob-updates_{time.strftime('%Y%m%d%H%M%S')}.pkl"
+    with open(filename, 'wb') as f:
+        pickle.dump(delta_kappas, f)
+
+    generate_plots_from_delta_kappas(delta_kappas)
