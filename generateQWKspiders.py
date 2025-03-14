@@ -98,19 +98,24 @@ def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1
         delta_kappas[category] = {model: {} for model in ai_columns}
         unique_values = df[category].unique()
 
-        for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
-            if value == reference_groups[category]:
-                continue
+        ref_condition = df[category] == reference_groups[category]
+        ref_filtered_df = df[ref_condition]
 
-            for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
+        for model in tqdm(ai_columns, desc=f"Models", leave=False, position=1):
+            # for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
+            #     if value == reference_groups[category]:
+            #         continue
+            kappas_ref = bootstrap_kappa(ref_filtered_df, model, n_iter)
+
+            for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=2):
+            # for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
+                if value == reference_groups[category]:
+                    continue
                 condition = df[category] == value
                 filtered_df = df[condition]
 
-                ref_condition = df[category] == reference_groups[category]
-                ref_filtered_df = df[ref_condition]
-
                 kappas = bootstrap_kappa(filtered_df, model, n_iter)
-                kappas_ref = bootstrap_kappa(ref_filtered_df, model, n_iter)
+
                 deltas = [a - b for a, b in zip(kappas, kappas_ref)]
                 delta_median = np.percentile(deltas, 50)
                 lower_value, upper_value = np.percentile(deltas, [2.5, 97.5])
@@ -266,6 +271,7 @@ if __name__ == '__main__':
 
     # Calculate delta Kappas
     print(f"Bootstrapping delta Kappas, this may take a while")
+    np.random.seed(42)  # For reproducibility
     delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
     #print(f"Delta Kappas: {delta_kappas}")
 
