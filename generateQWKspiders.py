@@ -1,22 +1,12 @@
-import pandas as pd
-import numpy as np
-from sklearn.metrics import cohen_kappa_score
 import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
+import pandas as pd
+from sklearn.metrics import cohen_kappa_score
 from sklearn.utils import resample
 from tqdm import tqdm
+import yaml
 
-
-# Step 1: Read data
-def read_data(file1, file2):
-    df1 = pd.read_csv(file1)
-    df2 = pd.read_csv(file2)
-    return df1, df2
-
-# Step 2: Determine categories dynamically based on column headings
-def determine_categories(df1):
-    categories = df1.columns[2:]
-    return categories
+from data_preprocessing import bin_dataframe_column
 
 # Step 3: Bin numerical columns like age
 def bin_data(df, bins_config):
@@ -214,18 +204,28 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
 
 # Main execution
 if __name__ == '__main__':
-    file1 = 'test_truthNdemographics.csv'
-    file2 = 'test_scores.csv'
-    df1, df2 = read_data(file1, file2)
+    # Load configuration
+    with open('config.yaml', 'r', encoding='utf-8') as stream:
+        config = yaml.load(stream, Loader=yaml.CLoader)
 
-    categories = determine_categories(df1)
+    # Open Files
+    df1 = pd.read_csv(config['input data']['file1'])
+    df2 = pd.read_csv(config['input data']['file2'])
+
+    # Determine Categories
+    categories = df1.columns[2:]
 
     # Bin numerical columns, specifically 'age'
-    bins_config = {
-        **age_bins,
-    }
+    numeric_cols = config['numeric_cols']
+    for str_col, col_dict in numeric_cols.items():
+        num_col = col_dict['raw column'] if 'raw column' in col_dict else str_col
+        bins = col_dict['bins'] if 'bins' in col_dict else None
+        labels = col_dict['labels'] if 'labels' in col_dict else None
 
-    df1 = bin_data(df1, bins_config)
+        if num_col in df.columns:
+            df = bin_dataframe_column(df, num_col, str_col, bins=bins, labels=labels)
+            categories.replace(num_col, str_col, inplace=True)
+
     matched_df = match_cases(df1, df2)
 
     reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
@@ -235,7 +235,7 @@ if __name__ == '__main__':
 
     kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
     print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
-    print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
+    print(f"Bootstrapping delta Kappas, this may take a while")
     delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
     #print(f"Delta Kappas: {delta_kappas}")
 

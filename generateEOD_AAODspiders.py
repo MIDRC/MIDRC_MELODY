@@ -155,35 +155,37 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
     plt.tight_layout()
     plt.show()
 
+
 # Example pipeline (wrap this into main if you want)
-file1 = '../test_truthNdemographics.csv'
-file2 = '../test.csv'
+if __name__ == '__main__':
+    file1 = '../test_truthNdemographics.csv'
+    file2 = '../test.csv'
 
-df1, df2 = pd.read_csv(file1), pd.read_csv(file2)
-categories = df1.columns[2:]
-df1 = bin_data(df1, age_bins)  # your binning logic
-matched_df = match_cases(df1, df2)
-reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
-ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
+    df1, df2 = pd.read_csv(file1), pd.read_csv(file2)
+    categories = df1.columns[2:]
+    df1 = bin_data(df1, age_bins)  # your binning logic
+    matched_df = match_cases(df1, df2)
+    reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
+    ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
 
-# Binarize
-filtered_df = binarize_scores(filtered_df, ai_cols, threshold=4)
+    # Binarize
+    filtered_df = binarize_scores(filtered_df, ai_cols, threshold=4)
 
-# EOD & AAOD Calculation
-eod_aaod = calculate_eod_aaod(filtered_df, categories, reference_groups, ai_cols)
+    # EOD & AAOD Calculation
+    eod_aaod = calculate_eod_aaod(filtered_df, categories, reference_groups, ai_cols)
 
-# Global scaling range
-all_values = []
-for model in ai_cols:
-    for metric in ['eod', 'aaod']:
-        _, values, lower, upper = extract_plot_data_eod_aaod(eod_aaod, model, metric)
-        all_values.extend(lower + upper)
+    # Global scaling range
+    all_values = []
+    for model in ai_cols:
+        for metric in ['eod', 'aaod']:
+            _, values, lower, upper = extract_plot_data_eod_aaod(eod_aaod, model, metric)
+            all_values.extend(lower + upper)
 
-global_min, global_max = min(all_values) - 0.05, max(all_values) + 0.05
+    global_min, global_max = min(all_values) - 0.05, max(all_values) + 0.05
 
-# Plot all models
-for model in ai_cols:
-    for metric in ['eod', 'aaod']:
-        groups, values, lower, upper = extract_plot_data_eod_aaod(eod_aaod, model, metric)
-        plot_spider_chart(groups, values, lower, upper, model, global_min, global_max, metric)
+    # Plot all models
+    for model in ai_cols:
+        for metric in ['eod', 'aaod']:
+            groups, values, lower, upper = extract_plot_data_eod_aaod(eod_aaod, model, metric)
+            plot_spider_chart(groups, values, lower, upper, model, global_min, global_max, metric)
 

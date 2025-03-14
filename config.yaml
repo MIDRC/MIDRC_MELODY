@@ -1,0 +1,17 @@
+input data:
+  file1: test_truthNdemographics.csv
+  file2: test_scores.csv
+
+numeric_cols:
+  age_binned:
+    raw column: age
+    bins: [ 0, 18, 30, 40, 50, 65, 75, 85, .inf ]
+    labels: ['<18', '18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+']
+
+spider_plot:
+  custom_orders:
+    'age': [ '18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+' ],
+    'sex': [ 'Male', 'Female' ],
+    'race': [ 'White', 'Black or African American', 'Asian', 'Other' ],
+    'ethnicity': [ 'Hispanic or Latino', 'Not Hispanic or Latino' ],
+    'intersectional_race_ethnicity': [ 'White and Not Hispanic or Latino', 'Not White or HisapanicLatino' ]
