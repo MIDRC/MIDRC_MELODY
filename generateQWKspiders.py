@@ -1,6 +1,7 @@
 import pickle
 import time
 
+from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -83,32 +84,41 @@ def calculate_kappas_and_intervals(df, ai_cols, n_iter=1000):
     return kappas, intervals
 
 # Custom bootstrap kappa
-def bootstrap_kappa(df, model, n_iter=1000):
-    kappas = []
-    for _ in range(n_iter):
-        sampled_df = resample(df, replace=True)
-        kappa = cohen_kappa_score(sampled_df['truth'], sampled_df[model])
-        kappas.append(kappa)
+def bootstrap_kappa(df, model, n_iter=1000, n_jobs=-1, base_seed=42):
+    # Generate unique seeds for each iteration from the base seed
+    seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
+
+    def resample_and_compute_kappa(df, model, seed):
+        sampled_df = resample(df, replace=True, random_state=seed)
+        return cohen_kappa_score(sampled_df['truth'], sampled_df[model])
+
+    # Use Parallel to run the bootstrap iterations in parallel
+    kappas = Parallel(n_jobs=n_jobs)(delayed(resample_and_compute_kappa)(df, model, seed) for seed in seeds)
+
     return kappas
 
 # Custom bootstrap kappa
-def bootstrap_kappa_by_columns(df, model, columns, n_iter=1000):
+def bootstrap_kappa_by_columns(df, model, columns, n_iter=1000, n_jobs=-1, base_seed=42):
     # Ensure columns is a list; if not, wrap it in a list.
     if not isinstance(columns, list):
         columns = [columns]
 
-    kappas = []
-    for _ in range(n_iter):
+    # Generate unique seeds for each iteration from the base seed
+    seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
+
+    def resample_and_compute_kappa(df, model, columns, seed):
         sampled_groups = []
         for group, group_df in df.groupby(columns):
             n_samples = len(group_df)
-            # Resample within the group so that counts match the original distribution
-            sampled_group = resample(group_df, replace=True, n_samples=n_samples, random_state=None)
+            sampled_group = resample(group_df, replace=True, n_samples=n_samples, random_state=seed)
             sampled_groups.append(sampled_group)
         sampled_df = pd.concat(sampled_groups)
-        kappa = cohen_kappa_score(sampled_df['truth'], sampled_df[model])
-        kappas.append(kappa)
-    return kappas
+        return cohen_kappa_score(sampled_df['truth'], sampled_df[model])
+
+    kappas = Parallel(n_jobs=n_jobs)(
+        delayed(resample_and_compute_kappa)(df, model, columns, seed)
+        for seed in seeds
+    )
 
 # Step 7: Calculate delta kappa
 def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1000):
@@ -299,6 +309,7 @@ if __name__ == '__main__':
     # Calculate delta Kappas
     print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
     np.random.seed(42)  # For reproducibility
+    # categories = ['race', 'ethnicity']  # Speed things up during development by reducing the number of categories
     delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
     #print(f"Delta Kappas: {delta_kappas}")
 
