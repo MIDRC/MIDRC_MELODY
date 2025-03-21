@@ -186,20 +186,31 @@ def extract_plot_data(delta_kappas, model_name):
 
 def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max):
     # Sort groups so that within each attribute they appear in order
+    use_bias_paper_axis_order = True
+    print('groups:', groups)
     def group_sort_key(label):
         attr, group = label.split(': ', 1)
         custom_orders = {
-            'age': ['18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+'],
+            'age_binned': ['18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+'],
             'sex': ['Male', 'Female'],
-            'race': ['White', 'Black or African American', 'Asian', 'Other'],
+            'race': ['White', 'Asian', 'Black or African American', 'Other'],
             'ethnicity': ['Hispanic or Latino', 'Not Hispanic or Latino'],
-            'white_nonhispanic': ['0', '1']
+            'intersectional_race_ethnicity': ['White', 'Not White or Hispanic or Latino'],
         }
+        if use_bias_paper_axis_order:
+            custom_orders = {
+                'age_binned': ['18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+'],
+                'race': ['White', 'Asian', 'Black or African American', 'Other'],
+                'ethnicity': ['Hispanic or Latino', 'Not Hispanic or Latino'],
+                'intersectional_race_ethnicity': ['White', 'Not White or Hispanic or Latino'],
+                'sex': ['Male', 'Female'],
+            }
         if attr in custom_orders:
+            attr_order = list(custom_orders.keys()).index(attr)
             order = custom_orders[attr]
-            return (attr, order.index(group)) if group in order else (attr, len(order))
+            return (attr_order, order.index(group)) if group in order else (attr_order, len(order))
         else:
-            return (attr, group)
+            return len(custom_orders), group
 
     combined = list(zip(groups, values, lower_bounds, upper_bounds))
     combined.sort(key=lambda x: group_sort_key(x[0]))
@@ -207,6 +218,11 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
 
     num_axes = len(groups)
     angles = np.linspace(0, 2 * np.pi, num_axes, endpoint=False).tolist()
+    print("angles before:", angles)
+    if use_bias_paper_axis_order:
+        angles.reverse()
+        angles = [(angle + np.pi / 2) % (2 * np.pi) for angle in angles]
+    print("angles after:", angles)
 
     # Close the loop for the plotted series
     values = list(values) + [values[0]]
@@ -280,6 +296,41 @@ def create_matched_df_from_files(input_data, numeric_cols_dict, column='case_nam
     return match_cases(df1, df2, column), categories
 
 
+def figure_to_image(fig):
+    # Draw the renderer
+    fig.canvas.draw()
+    # Get width and height in pixels
+    width, height = fig.canvas.get_width_height()
+    # Convert canvas to a numpy array (RGB)
+    img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    img = img.reshape(height, width, 3)
+    return img
+
+
+def display_figures_grid(figures, n_cols=3):
+    # Calculate the number of rows needed
+    n_figs = len(figures)
+    n_rows = (n_figs + n_cols - 1) // n_cols
+
+    # Create a figure with subplots for the grid display
+    grid_fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, n_rows * 4))
+
+    # In case there's a single row, make axes iterable
+    if n_rows == 1:
+        axes = np.array(axes)
+    axes = axes.flatten()
+
+    for i, fig in enumerate(figures):
+        img = figure_to_image(fig)
+        axes[i].imshow(img)
+        axes[i].axis('off')  # Turn off axis for clarity
+    # Remove any unused subplots
+    for ax in axes[n_figs:]:
+        ax.remove()
+
+    plt.tight_layout()
+
+
 def generate_plots_from_delta_kappas(delta_kappas):
     ai_models = extract_ai_models(delta_kappas)  # in case some of the ai_cols were inconsistent
 
@@ -303,6 +354,8 @@ def generate_plots_from_delta_kappas(delta_kappas):
         groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
         fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max)
         figures.append(fig)
+
+    display_figures_grid(figures)
 
     # Finally, show all charts with one plt.show() call
     plt.show()
