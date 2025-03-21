@@ -78,6 +78,7 @@ def calculate_kappas_and_intervals(df, ai_cols, n_iter=1000):
         lower_bnd = kappa_scores[int(0.025 * n_iter)]
         upper_bnd = kappa_scores[int(0.975 * n_iter)]
         intervals[col] = (lower_bnd, upper_bnd)
+        print(f"Model: {col} | Kappa: {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true_np)}")
         
     return kappas, intervals
 
@@ -90,6 +91,25 @@ def bootstrap_kappa(df, model, n_iter=1000):
         kappas.append(kappa)
     return kappas
 
+# Custom bootstrap kappa
+def bootstrap_kappa_by_columns(df, model, columns, n_iter=1000):
+    # Ensure columns is a list; if not, wrap it in a list.
+    if not isinstance(columns, list):
+        columns = [columns]
+
+    kappas = []
+    for _ in range(n_iter):
+        sampled_groups = []
+        for group, group_df in df.groupby(columns):
+            n_samples = len(group_df)
+            # Resample within the group so that counts match the original distribution
+            sampled_group = resample(group_df, replace=True, n_samples=n_samples, random_state=None)
+            sampled_groups.append(sampled_group)
+        sampled_df = pd.concat(sampled_groups)
+        kappa = cohen_kappa_score(sampled_df['truth'], sampled_df[model])
+        kappas.append(kappa)
+    return kappas
+
 # Step 7: Calculate delta kappa
 def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1000):
     delta_kappas = {}
@@ -98,8 +118,7 @@ def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1
         delta_kappas[category] = {model: {} for model in ai_columns}
         unique_values = df[category].unique()
 
-        ref_condition = df[category] == reference_groups[category]
-        ref_filtered_df = df[ref_condition]
+        ref_filtered_df = df[df[category] == reference_groups[category]]
 
         for model in tqdm(ai_columns, desc=f"Models", leave=False, position=1):
             # for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
@@ -111,8 +130,7 @@ def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1
             # for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
                 if value == reference_groups[category]:
                     continue
-                condition = df[category] == value
-                filtered_df = df[condition]
+                filtered_df = df[df[category] == value]
 
                 kappas = bootstrap_kappa(filtered_df, model, n_iter)
 
@@ -207,7 +225,9 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
     ax.set_title(f'Spider Plot for {model_name}', size=14, weight='bold')
 
     plt.tight_layout()
-    plt.show()
+
+    # Return the figure so it can be shown later
+    return fig
 
 
 def create_matched_df_from_files(input_data, numeric_cols_dict, column='case_name'):
@@ -248,9 +268,14 @@ def generate_plots_from_delta_kappas(delta_kappas):
     global_max = max(all_upper) + 0.05
 
     # Plot for each AI model
+    figures = []
     for model in ai_models:
         groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
-        plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max)
+        fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max)
+        figures.append(fig)
+
+    # Finally, show all charts with one plt.show() call
+    plt.show()
 
 
 # Main execution
@@ -266,11 +291,13 @@ if __name__ == '__main__':
     # Determine AI columns (excluding 'case_name' and 'truth')
     ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
 
+    np.random.seed(42)  # For reproducibility
     kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
-    print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
+    print(f"Mean Kappas: {kappas}")
+    print(f"Confidence Intervals: {intervals}")
 
     # Calculate delta Kappas
-    print(f"Bootstrapping delta Kappas, this may take a while")
+    print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
     np.random.seed(42)  # For reproducibility
     delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
     #print(f"Delta Kappas: {delta_kappas}")

@@ -88,6 +88,7 @@ def calculate_kappas_and_intervals(df, ai_cols, n_iter=1000):
         lower_bnd = kappa_scores[int(0.025 * n_iter)]
         upper_bnd = kappa_scores[int(0.975 * n_iter)]
         intervals[col] = (lower_bnd, upper_bnd)
+        print(f"Model: {col} | Kappa: {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true_np)}")
         
     return kappas, intervals
 
@@ -236,8 +237,12 @@ if __name__ == '__main__':
     # Determine AI columns (excluding 'case_name' and 'truth')
     ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
 
+    np.random.seed(42)  # For reproducibility
     kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
-    print(f"Mean Kappas: {kappas}, Intervals: {intervals}")
+    print(f"Mean Kappas: {kappas}")
+    print(f"Confidence Intervals: {intervals}")
+
+    # Calculate delta kappas
     print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
     np.random.seed(42) # For reproducibility
     delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
