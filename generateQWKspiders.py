@@ -301,10 +301,13 @@ def figure_to_image(fig):
     fig.canvas.draw()
     # Get width and height in pixels
     width, height = fig.canvas.get_width_height()
-    # Convert canvas to a numpy array (RGB)
-    img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    img = img.reshape(height, width, 3)
-    return img
+    # Convert canvas to a numpy array (ARGB)
+    img = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
+    img = img.reshape(height, width, 4)
+    # Convert ARGB to RGB by discarding the alpha channel
+    # The buffer order is: [A, R, G, B]
+    rgb_img = img[:, :, 1:4]
+    return rgb_img
 
 
 def display_figures_grid(figures, n_cols=3):
@@ -313,7 +316,7 @@ def display_figures_grid(figures, n_cols=3):
     n_rows = (n_figs + n_cols - 1) // n_cols
 
     # Create a figure with subplots for the grid display
-    grid_fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, n_rows * 4))
+    grid_fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 8, n_rows * 8))
 
     # In case there's a single row, make axes iterable
     if n_rows == 1:
