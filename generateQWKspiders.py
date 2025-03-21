@@ -185,11 +185,9 @@ def extract_plot_data(delta_kappas, model_name):
     return groups, values, lower_bounds, upper_bounds
 
 def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max):
-    # Sort groups (and corresponding values and bounds) so that within each attribute they appear in order
+    # Sort groups so that within each attribute they appear in order
     def group_sort_key(label):
-        # Split into attribute and group (e.g., 'age: 18-29' -> ('age', '18-29'))
         attr, group = label.split(': ', 1)
-        # Use custom sort orders for known attributes, fallback to alphabetical
         custom_orders = {
             'age': ['18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+'],
             'sex': ['Male', 'Female'],
@@ -203,49 +201,62 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
         else:
             return (attr, group)
 
-    # Combine all data into tuples to sort together
     combined = list(zip(groups, values, lower_bounds, upper_bounds))
     combined.sort(key=lambda x: group_sort_key(x[0]))
-
-    # Unpack sorted data
     groups, values, lower_bounds, upper_bounds = zip(*combined)
 
-    # Set up angles for each axis
     num_axes = len(groups)
     angles = np.linspace(0, 2 * np.pi, num_axes, endpoint=False).tolist()
 
-    # Close the loop for the plot itself
+    # Close the loop for the plotted series
     values = list(values) + [values[0]]
     lower_bounds = list(lower_bounds) + [lower_bounds[0]]
     upper_bounds = list(upper_bounds) + [upper_bounds[0]]
     angles = angles + [angles[0]]
 
-    # Create plot
     fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
 
-    # Plot main line
+    # Plot the main line and markers
     ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2)
-    ax.scatter(angles, values, marker='o', c='b')
+    ax.scatter(angles, values, marker='o', color='b')
 
-    # Add horizontal line at y=0
-    baseline=np.zeros(len(values))
-    ax.plot(angles, baseline, color='seagreen', linestyle='--', linewidth=1 , alpha=0.8)
-    #ax.axhline(y=0, color='red', linestyle='--', linewidth=1.5)
+    # Instead of drawing a line between the vertices for baseline,
+    # generate a smooth circle at the 0-level.
+    theta_full = np.linspace(0, 2 * np.pi, 100)
+    baseline_circle = np.full_like(theta_full, 0)
+    ax.plot(theta_full, baseline_circle, color='seagreen', linestyle='--', linewidth=3, alpha=0.8)
 
-    # Confidence interval band
     ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2)
-
-    # Set axis properties
     ax.set_ylim(global_min, global_max)
-    ax.set_xticks(angles[:-1])  # the angles without the closing duplicate
+    ax.set_xticks(angles[:-1])
     ax.set_xticklabels(groups, fontsize=8, ha='center')
-
-    # Title
     ax.set_title(f'Spider Plot for {model_name}', size=14, weight='bold')
 
-    plt.tight_layout()
+    # Emphasize tick labels based on bounds.
+    # Iterate over the tick labels (skipping the last repeated label)
+    for i, label in enumerate(ax.get_xticklabels()):
+        if i >= len(lower_bounds) - 1:
+            break
+        angle = angles[i]
+        # Calculate rotation so that the dash is perpendicular to the corresponding radius.
+        # For angle=0, we want 90 degrees; for angle=pi/2, we want 0 degrees, etc.
+        rotation_deg = 90 + np.degrees(angle)
+        # If lower bound is greater than zero, mark with blue bold text
+        if lower_bounds[i] > 0:
+            label.set_fontweight('bold')
+            label.set_color('maroon')
+            # Add a maroon point at the lower bound for emphasis.
+            ax.text(angle, lower_bounds[i], '—', color='maroon', fontsize=12,
+                    rotation=rotation_deg, ha='center', va='center')
+        # If upper bound is less than zero, mark with red bold text
+        elif upper_bounds[i] < 0:
+            label.set_fontweight('bold')
+            label.set_color('red')
+            # Add a red point at the upper bound for emphasis.
+            ax.text(angle, upper_bounds[i], '—', color='red', fontsize=12,
+                    rotation=rotation_deg, ha='center', va='center')
 
-    # Return the figure so it can be shown later
+    plt.tight_layout()
     return fig
 
 
