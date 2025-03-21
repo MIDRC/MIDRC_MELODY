@@ -121,10 +121,14 @@ def bootstrap_kappa_by_columns(df, model, columns, n_iter=1000, n_jobs=-1, base_
     )
 
 # Step 7: Calculate delta kappa
-def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1000):
+def calculate_delta_kappa(df, categories, reference_groups, valid_groups, ai_columns, n_iter=1000):
     delta_kappas = {}
 
     for category in tqdm(categories, desc='Categories', position=0):
+        # Skip if the category is not in the valid groups
+        if category not in valid_groups:
+            continue
+
         delta_kappas[category] = {model: {} for model in ai_columns}
         unique_values = df[category].unique()
 
@@ -138,8 +142,13 @@ def calculate_delta_kappa(df, categories, reference_groups, ai_columns, n_iter=1
 
             for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=2):
             # for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
+                # Skip if the value is the reference group
                 if value == reference_groups[category]:
                     continue
+                # Skip if the value is not in the valid groups
+                if value not in valid_groups[category]:
+                    continue
+
                 filtered_df = df[df[category] == value]
 
                 kappas = bootstrap_kappa(filtered_df, model, n_iter)
@@ -296,13 +305,13 @@ if __name__ == '__main__':
 
     matched_df, categories = create_matched_df_from_files(config['input data'], config['numeric_cols'])
 
-    reference_groups, valid_groups, filtered_df = determine_validNreference_groups(matched_df, categories)
+    reference_groups, valid_groups, _ = determine_validNreference_groups(matched_df, categories)
 
     # Determine AI columns (excluding 'case_name' and 'truth')
-    ai_cols = [col for col in filtered_df.columns if col.startswith('ai_')]
+    ai_cols = [col for col in matched_df.columns if col.startswith('ai_')]
 
     np.random.seed(42)  # For reproducibility
-    kappas, intervals = calculate_kappas_and_intervals(filtered_df, ai_cols)
+    kappas, intervals = calculate_kappas_and_intervals(matched_df, ai_cols)
     print(f"Mean Kappas: {kappas}")
     print(f"Confidence Intervals: {intervals}")
 
@@ -310,7 +319,7 @@ if __name__ == '__main__':
     print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
     np.random.seed(42)  # For reproducibility
     # categories = ['race', 'ethnicity']  # Speed things up during development by reducing the number of categories
-    delta_kappas = calculate_delta_kappa(filtered_df, categories, reference_groups, ai_cols)
+    delta_kappas = calculate_delta_kappa(matched_df, categories, reference_groups, valid_groups, ai_cols)
     #print(f"Delta Kappas: {delta_kappas}")
 
     filename = f"delta_kappas_rob-updates_{time.strftime('%Y%m%d%H%M%S')}.pkl"

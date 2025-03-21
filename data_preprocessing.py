@@ -56,9 +56,9 @@ def _adjust_outliers(df: pd.DataFrame, cut_column_name: str, column_name: str, b
     Returns:
         pd.DataFrame: DataFrame with the outliers adjusted in the cut column
     """
-    new_text = "Outlier"
-    low_text = new_text + "_Low"
-    high_text = new_text + "_High"
+    new_text = "Not Reported"
+    low_text = "Outlier_Low"
+    high_text = "Outlier_High"
     print(f"WARNING: There are values outside the bins specified for the '{column_name}' column.")
     df.loc[df[cut_column_name].isna() & (df[column_name] < bins[0]), cut_column_name] = low_text
     df.loc[df[cut_column_name].isna() & (df[column_name] >= bins[-1]), cut_column_name] = high_text
@@ -70,7 +70,7 @@ def _adjust_outliers(df: pd.DataFrame, cut_column_name: str, column_name: str, b
         print(f"         {(df[cut_column_name] == high_text).sum()} values are above the max bin value.\n"
               f"         These will be placed in a new '{high_text}' category.")
     if (df[cut_column_name] == new_text).sum() > 0:
-        print(f"         {(df[cut_column_name] == new_text).sum()} values are outside the specified bins.\n"
+        print(f"         {(df[cut_column_name] == new_text).sum()} values are nan.\n"
               f"         These will be placed in a new '{new_text}' category.")
     return df
 
