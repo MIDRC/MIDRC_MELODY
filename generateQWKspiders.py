@@ -90,7 +90,7 @@ def bootstrap_kappa(df, model, n_iter=1000, n_jobs=-1, base_seed=42):
 
     def resample_and_compute_kappa(df, model, seed):
         sampled_df = resample(df, replace=True, random_state=seed)
-        return cohen_kappa_score(sampled_df['truth'], sampled_df[model])
+        return cohen_kappa_score(sampled_df['truth'], sampled_df[model], weights='quadratic')
 
     # Use Parallel to run the bootstrap iterations in parallel
     kappas = Parallel(n_jobs=n_jobs)(delayed(resample_and_compute_kappa)(df, model, seed) for seed in seeds)
@@ -113,7 +113,7 @@ def bootstrap_kappa_by_columns(df, model, columns, n_iter=1000, n_jobs=-1, base_
             sampled_group = resample(group_df, replace=True, n_samples=n_samples, random_state=seed)
             sampled_groups.append(sampled_group)
         sampled_df = pd.concat(sampled_groups)
-        return cohen_kappa_score(sampled_df['truth'], sampled_df[model])
+        return cohen_kappa_score(sampled_df['truth'], sampled_df[model], weights='quadratic')
 
     kappas = Parallel(n_jobs=n_jobs)(
         delayed(resample_and_compute_kappa)(df, model, columns, seed)
@@ -187,7 +187,6 @@ def extract_plot_data(delta_kappas, model_name):
 def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max):
     # Sort groups so that within each attribute they appear in order
     use_bias_paper_axis_order = True
-    print('groups:', groups)
     def group_sort_key(label):
         attr, group = label.split(': ', 1)
         custom_orders = {
@@ -218,11 +217,9 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
 
     num_axes = len(groups)
     angles = np.linspace(0, 2 * np.pi, num_axes, endpoint=False).tolist()
-    print("angles before:", angles)
     if use_bias_paper_axis_order:
         angles.reverse()
         angles = [(angle + np.pi / 2) % (2 * np.pi) for angle in angles]
-    print("angles after:", angles)
 
     # Close the loop for the plotted series
     values = list(values) + [values[0]]
@@ -379,8 +376,8 @@ if __name__ == '__main__':
 
     np.random.seed(42)  # For reproducibility
     kappas, intervals = calculate_kappas_and_intervals(matched_df, ai_cols)
-    print(f"Mean Kappas: {kappas}")
-    print(f"Confidence Intervals: {intervals}")
+    # print(f"Mean Kappas: {kappas}")
+    # print(f"Confidence Intervals: {intervals}")
 
     # Calculate delta Kappas
     print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
