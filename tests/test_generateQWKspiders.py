@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from generateQWKspiders import (
+from generate_qwk_spiders import (
     determine_validNreference_groups,
     determine_categories,
     calculate_kappas_and_intervals,
@@ -14,10 +14,17 @@ from generateQWKspiders import (
     extract_plot_data,
     plot_spider_chart,
     bin_data,
-    age_bins,
     match_cases
 )
 
+
+# CDC age bin configuration
+age_bins = {
+    'age': {
+        'bins': [0, 18, 30, 40, 50, 65, 75, 85, np.inf],
+        'labels': ['<18', '18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+']
+    }
+}
 
 def dataframe_hash(df: pd.DataFrame) -> str:
     # Compute a hash for each row, including index in the hash.

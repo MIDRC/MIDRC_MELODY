@@ -2,6 +2,10 @@ input data:
   file1: test_truthNdemographics.csv
   file2: test_scores.csv
 
+output:
+  save_delta_kappas: False
+  delta_kappas_file_prefix: output/delta_kappas_rob-updates_
+
 numeric_cols:
   age_binned:
     raw column: age
