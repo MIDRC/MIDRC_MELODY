@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from setuptools.package_index import unique_values
 from sklearn.utils import resample
+from tqdm import tqdm
 import yaml
 
 from data_loading import determine_validNreference_groups, create_matched_df_from_files
@@ -17,23 +20,35 @@ def binarize_scores(df, ai_cols, threshold=4):
 def calculate_eod_aaod(df, categories, reference_groups, ai_columns, n_iter=1000):
     eod_aaod = {category: {model: {} for model in ai_columns} for category in categories}
 
-    for category in categories:
+    for category in tqdm(categories, desc='Categories', position=0):
         ref_group = reference_groups[category]
+        unique_values = df[category].unique()
 
-        for value in df[category].unique():
+        for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
             if value == ref_group:
                 continue
-
+            # Bootstrapping
+            eod_samples, aaod_samples = {}, {}
             for model in ai_columns:
-                # Bootstrapping
-                eod_samples, aaod_samples = [], []
+                eod_samples[model] = []
+                aaod_samples[model] = []
 
-                for _ in range(n_iter):
-                    sample_df = resample(df)
+            def resample_by_column(df, columns=category, seed=None):
+                sampled_groups = []
+                for group, group_df in df.groupby(columns):
+                    n_samples = len(group_df)
+                    sampled_group = resample(group_df, replace=True, n_samples=n_samples, random_state=seed)
+                    sampled_groups.append(sampled_group)
+                sampled_df = pd.concat(sampled_groups)
+                return sampled_df
 
-                    ref_df = sample_df[sample_df[category] == ref_group]
-                    group_df = sample_df[sample_df[category] == value]
+            for _ in tqdm(range(n_iter), desc="Bootstraps", leave=False, position=2):
+                sample_df = resample_by_column(df)
 
+                ref_df = sample_df[sample_df[category] == ref_group]
+                group_df = sample_df[sample_df[category] == value]
+
+                for model in ai_columns:
                     # TPR & FPR for reference group
                     tpr_ref = ref_df[(ref_df['truth'] == 1) & (ref_df[model] == 1)].shape[0] / (ref_df['truth'] == 1).sum()
                     fpr_ref = ref_df[(ref_df['truth'] == 0) & (ref_df[model] == 1)].shape[0] / (ref_df['truth'] == 0).sum()
@@ -42,13 +57,14 @@ def calculate_eod_aaod(df, categories, reference_groups, ai_columns, n_iter=1000
                     tpr_group = group_df[(group_df['truth'] == 1) & (group_df[model] == 1)].shape[0] / (group_df['truth'] == 1).sum()
                     fpr_group = group_df[(group_df['truth'] == 0) & (group_df[model] == 1)].shape[0] / (group_df['truth'] == 0).sum()
 
-                    eod_samples.append(tpr_group - tpr_ref)
-                    aaod_samples.append(0.5 * (abs(fpr_group - fpr_ref) + abs(tpr_group - tpr_ref)))
+                    eod_samples[model].append(tpr_group - tpr_ref)
+                    aaod_samples[model].append(0.5 * (abs(fpr_group - fpr_ref) + abs(tpr_group - tpr_ref)))
 
+            for model in ai_columns:
                 # Median and 95% CI
-                eod_median, aaod_median = np.median(eod_samples), np.median(aaod_samples)
-                eod_ci = np.percentile(eod_samples, [2.5, 97.5])
-                aaod_ci = np.percentile(aaod_samples, [2.5, 97.5])
+                eod_median, aaod_median = np.median(eod_samples[model]), np.median(aaod_samples[model])
+                eod_ci = np.percentile(eod_samples[model], [2.5, 97.5])
+                aaod_ci = np.percentile(aaod_samples[model], [2.5, 97.5])
 
                 eod_aaod[category][model][value] = {
                     'eod': (eod_median, eod_ci),
