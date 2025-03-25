@@ -155,7 +155,10 @@ if __name__ == '__main__':
     matched_df = binarize_scores(matched_df, truth_col, test_cols, threshold=4)
 
     # EOD & AAOD Calculation
-    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups, truth_col, test_cols)
+    bootstrap_config = config.get('bootstrap', {})
+    rand_seed = bootstrap_config.get('seed', None)
+    n_iter = bootstrap_config.get('iterations', 1000)
+    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups, truth_col, test_cols, n_iter=n_iter)
 
     metrics = ['eod', 'aaod']
     plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)

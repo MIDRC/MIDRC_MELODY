@@ -12,7 +12,8 @@ from data_loading import create_matched_df_from_files, determine_valid_n_referen
 from plot_tools import plot_spider_chart, display_figures_grid
 
 # Step 6: Calculate kappa and bootstrap confidence intervals
-def calculate_kappas_and_intervals(df, truth_col, ai_cols, n_iter=1000):
+def calculate_kappas_and_intervals(df, truth_col, ai_cols, n_iter=1000, base_seed=None):
+    np.random.seed(base_seed)  # For reproducibility
     kappas = {}
     intervals = {}
     y_true = df[truth_col]
@@ -37,7 +38,7 @@ def calculate_kappas_and_intervals(df, truth_col, ai_cols, n_iter=1000):
     return kappas, intervals
 
 # Custom bootstrap kappa
-def bootstrap_kappa(df, truth_col, model, n_iter=1000, n_jobs=-1, base_seed=42):
+def bootstrap_kappa(df, truth_col, model, n_iter=1000, n_jobs=-1, base_seed=None):
     # Generate unique seeds for each iteration from the base seed
     seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
 
@@ -51,7 +52,7 @@ def bootstrap_kappa(df, truth_col, model, n_iter=1000, n_jobs=-1, base_seed=42):
     return kappas
 
 # Custom bootstrap kappa
-def bootstrap_kappa_by_columns(df, truth_col, model, columns, n_iter=1000, n_jobs=-1, base_seed=42):
+def bootstrap_kappa_by_columns(df, truth_col, model, columns, n_iter=1000, n_jobs=-1, base_seed=None):
     # Ensure columns is a list; if not, wrap it in a list.
     if not isinstance(columns, list):
         columns = [columns]
@@ -74,7 +75,7 @@ def bootstrap_kappa_by_columns(df, truth_col, model, columns, n_iter=1000, n_job
     )
 
 # Step 7: Calculate delta kappa
-def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000):
+def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000, base_seed=None):
     delta_kappas = {}
 
     for category in tqdm(categories, desc='Categories', position=0):
@@ -91,7 +92,7 @@ def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_
             # for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
             #     if value == reference_groups[category]:
             #         continue
-            kappas_ref = bootstrap_kappa(ref_filtered_df, truth_col, model, n_iter)
+            kappas_ref = bootstrap_kappa(ref_filtered_df, truth_col, model, n_iter, base_seed=base_seed)
 
             for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=2):
             # for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
@@ -104,7 +105,7 @@ def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_
 
                 filtered_df = df[df[category] == value]
 
-                kappas = bootstrap_kappa(filtered_df, truth_col, model, n_iter)
+                kappas = bootstrap_kappa(filtered_df, truth_col, model, n_iter, base_seed=base_seed)
 
                 deltas = [a - b for a, b in zip(kappas, kappas_ref)]
                 delta_median = np.percentile(deltas, 50)
@@ -197,21 +198,23 @@ if __name__ == '__main__':
 
     reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
 
-    np.random.seed(42)  # For reproducibility
+    bootstrap_config = config.get('bootstrap', {})
+    rand_seed = bootstrap_config.get('seed', None)
+    n_iter = bootstrap_config.get('iterations', 1000)
+
     truth_col = config['input data'].get('truth column', 'truth')
-    kappas, intervals = calculate_kappas_and_intervals(matched_df, truth_col, test_cols)
+    kappas, intervals = calculate_kappas_and_intervals(matched_df, truth_col, test_cols, base_seed=rand_seed)
 
     # Calculate delta Kappas
     print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
-    np.random.seed(42)  # For reproducibility
-    # categories = ['race', 'ethnicity']  # Speed things up during development by reducing the number of categories
     delta_kappas = calculate_delta_kappa(matched_df,
                                          categories,
                                          reference_groups,
                                          valid_groups,
                                          truth_col,
                                          test_cols,
-                                         n_iter=1000,
+                                         n_iter=n_iter,
+                                         base_seed=rand_seed,
                                          )
     print_table_from_dict(delta_kappas, tablefmt="rounded_outline")
 
