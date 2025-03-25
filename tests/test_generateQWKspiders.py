@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from generate_qwk_spiders import (
-    determine_validNreference_groups,
+    determine_valid_n_reference_groups,
     determine_categories,
     calculate_kappas_and_intervals,
     calculate_delta_kappa,
@@ -43,7 +43,7 @@ class TestGenerateQWKspiders:
 
         self.categories = determine_categories(df1)
         self.matched_df = match_cases(df1, df2)
-        self.reference_groups, self.valid_groups, self.filtered_df = determine_validNreference_groups(self.matched_df, self.categories)
+        self.reference_groups, self.valid_groups, self.filtered_df = determine_valid_n_reference_groups(self.matched_df, self.categories)
 
     def test_determine_categories(self):
         expected = np.array(['age', 'ethnicity', 'race', 'sex', 'intersectional_race_ethnicity'])

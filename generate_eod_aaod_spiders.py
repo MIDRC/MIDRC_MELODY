@@ -7,18 +7,21 @@ from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 import yaml
 
-from data_loading import determine_validNreference_groups, create_matched_df_from_files
+from data_loading import determine_valid_n_reference_groups, create_matched_df_from_files, save_pickled_data
 from plot_tools import plot_spider_chart, display_figures_grid
 
 
 # Helper to dynamically binarize based on threshold (e.g., 4)
-def binarize_scores(df, ai_cols, threshold=4):
-    for col in ai_cols + ['truth']:
+def binarize_scores(df, truth_col, ai_cols, threshold=4):
+    if not isinstance(ai_cols, list):
+        ai_cols = [ai_cols]
+
+    for col in [truth_col] + ai_cols:
         df[col] = (df[col] >= threshold).astype(int)
     return df
 
 # EOD calculation function
-def calculate_eod_aaod(df, categories, reference_groups, valid_groups, ai_columns, n_iter=1000):
+def calculate_eod_aaod(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000):
     eod_aaod = {category: {model: {} for model in ai_columns} for category in categories}
 
     for category in tqdm(categories, desc='Categories', position=0):
@@ -57,15 +60,15 @@ def calculate_eod_aaod(df, categories, reference_groups, valid_groups, ai_column
                 model_results = {}
                 for model in ai_columns:
                     # Calculate TPR and FPR for reference group.
-                    tpr_ref = ref_df[(ref_df['truth'] == 1) & (ref_df[model] == 1)].shape[0] / (
-                                ref_df['truth'] == 1).sum()
-                    fpr_ref = ref_df[(ref_df['truth'] == 0) & (ref_df[model] == 1)].shape[0] / (
-                                ref_df['truth'] == 0).sum()
+                    tpr_ref = ref_df[(ref_df[truth_col] == 1) & (ref_df[model] == 1)].shape[0] / (
+                                ref_df[truth_col] == 1).sum()
+                    fpr_ref = ref_df[(ref_df[truth_col] == 0) & (ref_df[model] == 1)].shape[0] / (
+                                ref_df[truth_col] == 0).sum()
                     # Calculate TPR and FPR for current group.
-                    tpr_group = group_df[(group_df['truth'] == 1) & (group_df[model] == 1)].shape[0] / (
-                                group_df['truth'] == 1).sum()
-                    fpr_group = group_df[(group_df['truth'] == 0) & (group_df[model] == 1)].shape[0] / (
-                                group_df['truth'] == 0).sum()
+                    tpr_group = group_df[(group_df[truth_col] == 1) & (group_df[model] == 1)].shape[0] / (
+                                group_df[truth_col] == 1).sum()
+                    fpr_group = group_df[(group_df[truth_col] == 0) & (group_df[model] == 1)].shape[0] / (
+                                group_df[truth_col] == 0).sum()
                     eod = tpr_group - tpr_ref
                     aaod = 0.5 * (abs(fpr_group - fpr_ref) + abs(tpr_group - tpr_ref))
                     model_results[model] = (eod, aaod)
@@ -73,7 +76,7 @@ def calculate_eod_aaod(df, categories, reference_groups, valid_groups, ai_column
 
             # Run bootstrap iterations in parallel.
             # Wrap the Parallel call with tqdm_joblib to display progress
-            with tqdm_joblib(total=n_iter, desc="Bootstraps", leave=False):
+            with tqdm_joblib(total=n_iter, desc=f"Bootstrapping '{value}' Group", leave=False):
                 bootstrap_results = Parallel(n_jobs=-1)(
                     delayed(compute_bootstrap)(i) for i in range(n_iter)
                 )
@@ -109,6 +112,33 @@ def extract_plot_data_eod_aaod(eod_aaod, model, metric='eod'):
                 
     return groups, values, lower_bounds, upper_bounds
 
+def generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=['eod', 'aaod']):
+    all_values = []
+    plot_data_dict = {}
+    for metric in metrics:
+        plot_data_dict[metric] = {}
+        for model in test_cols:
+            groups, values, lower, upper = extract_plot_data_eod_aaod(eod_aaod, model, metric)
+            plot_data_dict[metric][model] = (groups, values, lower, upper)
+            all_values.extend(lower + upper)
+
+    global_min, global_max = min(all_values) - 0.05, max(all_values) + 0.05
+
+    return plot_data_dict, global_min, global_max
+
+def plot_data_eod_aaod(plot_data_dict, test_cols, metrics=['eod', 'aaod'], plot_config=None):
+    figures_dict = {metric: [] for metric in metrics}
+    for metric in metrics:
+        metric_dict = plot_data_dict[metric]
+        for model in test_cols:
+            groups, values, lower, upper = metric_dict[model]
+            fig = plot_spider_chart(groups, values, lower, upper, model, global_min, global_max, metric=metric, plot_config=plot_config)
+            figures_dict[metric].append(fig)
+
+    for _, figures in figures_dict.items():
+        display_figures_grid(figures)
+
+    return figures_dict
 
 # Example pipeline (wrap this into main if you want)
 if __name__ == '__main__':
@@ -116,38 +146,24 @@ if __name__ == '__main__':
     with open('config.yaml', 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
-    matched_df, categories = create_matched_df_from_files(config['input data'], config['numeric_cols'])
+    matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
 
-    reference_groups, valid_groups, _ = determine_validNreference_groups(matched_df, categories)
-    ai_cols = [col for col in matched_df.columns if col.startswith('ai_')]
+    reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
+    truth_col = config['input data'].get('truth column', 'truth')
 
     # Binarize
-    matched_df = binarize_scores(matched_df, ai_cols, threshold=4)
+    matched_df = binarize_scores(matched_df, truth_col, test_cols, threshold=4)
 
     # EOD & AAOD Calculation
-    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups, ai_cols)
+    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups, truth_col, test_cols)
 
-    # Global scaling range
-    all_values = []
-    plot_data_dict = {}
-    for model in ai_cols:
-        plot_data_dict[model] = {}
-        for metric in ['eod', 'aaod']:
-            groups, values, lower, upper = extract_plot_data_eod_aaod(eod_aaod, model, metric)
-            plot_data_dict[model][metric] = (groups, values, lower, upper)
-            all_values.extend(lower + upper)
-
-    global_min, global_max = min(all_values) - 0.05, max(all_values) + 0.05
+    metrics = ['eod', 'aaod']
+    plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)
 
     # Plot all models
-    figures_dict = {'eod': [], 'aaod': []}
-    for model in ai_cols:
-        for metric in ['eod', 'aaod']:
-            groups, values, lower, upper = plot_data_dict[model][metric]
-            fig = plot_spider_chart(groups, values, lower, upper, model, global_min, global_max, metric=metric)
-            figures_dict[metric].append(fig)
-
-    for _, figures in figures_dict.items():
-        display_figures_grid(figures)
+    figures_dict = plot_data_eod_aaod(plot_data_dict, test_cols, metrics=metrics, plot_config=config['plot'])
 
     plt.show()  # Show all figures at once
+
+    for metric in metrics:
+        save_pickled_data(config['output'], metric, plot_data_dict[metric])

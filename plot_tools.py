@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max, metric=None):
+def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max, metric=None, plot_config: dict = None):
     # Sort groups so that within each attribute they appear in order
-    # TODO: We should move this into the config file, using L,R,T,B for start, and CW or CCW rotation
-    use_bias_paper_axis_order = True
-    def group_sort_key(label):
-        attr, group = label.split(': ', 1)
+    if plot_config is None:
+        plot_config = {}
+    custom_orders = plot_config.get('custom_orders', None)
+    if custom_orders is None:
         custom_orders = {
             'age_binned': ['18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+'],
             'sex': ['Male', 'Female'],
@@ -14,14 +14,8 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
             'ethnicity': ['Hispanic or Latino', 'Not Hispanic or Latino'],
             'intersectional_race_ethnicity': ['White', 'Not White or Hispanic or Latino'],
         }
-        if use_bias_paper_axis_order:
-            custom_orders = {
-                'age_binned': ['18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+'],
-                'race': ['White', 'Asian', 'Black or African American', 'Other'],
-                'ethnicity': ['Hispanic or Latino', 'Not Hispanic or Latino'],
-                'intersectional_race_ethnicity': ['White', 'Not White or Hispanic or Latino'],
-                'sex': ['Male', 'Female'],
-            }
+    def group_sort_key(label, custom_orders):
+        attr, group = label.split(': ', 1)
         if attr in custom_orders:
             attr_order = list(custom_orders.keys()).index(attr)
             order = custom_orders[attr]
@@ -30,14 +24,23 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
             return len(custom_orders), group
 
     combined = list(zip(groups, values, lower_bounds, upper_bounds))
-    combined.sort(key=lambda x: group_sort_key(x[0]))
+    combined.sort(key=lambda x: group_sort_key(x[0], custom_orders))
     groups, values, lower_bounds, upper_bounds = zip(*combined)
 
     num_axes = len(groups)
     angles = np.linspace(0, 2 * np.pi, num_axes, endpoint=False).tolist()
-    if use_bias_paper_axis_order:
+    if plot_config.get('clockwise', False):  # matplotlib default is counter-clockwise
         angles.reverse()
-        angles = [(angle + np.pi / 2) % (2 * np.pi) for angle in angles]
+    start_loc = plot_config.get('start', 'right')  # matplotlib default is right
+    if start_loc.startswith('t'):
+        angle_rot = np.pi / 2
+    elif start_loc.startswith('l'):
+        angle_rot = np.pi
+    elif start_loc.startswith('b'):
+        angle_rot = 3 * np.pi / 2
+    else:
+        angle_rot = 0
+    angles = [(angle + angle_rot) % (2 * np.pi) for angle in angles]
 
     # Close the loop for the plotted series
     values, lower_bounds, upper_bounds = map(lambda x: list(x) + [x[0]], [values, lower_bounds, upper_bounds])
@@ -50,26 +53,27 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
     ax.scatter(angles, values, marker='o', color='b')
     ax.set_ylim(global_min, global_max)
 
-    if metric is None:
-        # Instead of drawing a line between the vertices for baseline,
-        # generate a smooth circle at the 0-level.
-        theta_full = np.linspace(0, 2 * np.pi, 100)
-        baseline_circle = np.full_like(theta_full, 0)
-        ax.plot(theta_full, baseline_circle, color='seagreen', linestyle='--', linewidth=3, alpha=0.8)
-    elif metric.upper() == 'EOD':
-        ax.fill_between(angles, -0.1, 0.1, color='lightgreen', alpha=0.5)
-    elif metric.upper() == 'AAOD':
-        ax.fill_between(angles, 0, 0.1, color='lightgreen', alpha=0.5)
-        ax.set_ylim(0, global_max)
+    if metric is not None:
+        if metric.upper() == 'QWK':
+            # Instead of drawing a line between the vertices for baseline,
+            # generate a smooth circle at the 0-level.
+            theta_full = np.linspace(0, 2 * np.pi, 100)
+            baseline_circle = np.full_like(theta_full, 0)
+            ax.plot(theta_full, baseline_circle, color='seagreen', linestyle='--', linewidth=3, alpha=0.8)
+        elif metric.upper() == 'EOD':
+            ax.fill_between(angles, -0.1, 0.1, color='lightgreen', alpha=0.5)
+        elif metric.upper() == 'AAOD':
+            ax.fill_between(angles, 0, 0.1, color='lightgreen', alpha=0.5)
+            ax.set_ylim(0, global_max)
 
 
     ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2)
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(groups, fontsize=8, ha='center')
-    title = f'Spider Plot for {model_name}' + '' if metric is None else f' ({metric.upper()})'
+    title = '' if metric is None else f'{metric.upper()} ' + f'Spider Plot for {model_name}'
     ax.set_title(title, size=14, weight='bold')
 
-    if metric is None:  # This is a QWK plot
+    if metric.upper() == 'QWK':  # This is a QWK plot
         # Emphasize tick labels based on bounds.
         # Iterate over the tick labels (skipping the last repeated label)
         for i, label in enumerate(ax.get_xticklabels()):

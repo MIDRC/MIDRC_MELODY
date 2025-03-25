@@ -1,6 +1,3 @@
-import pickle
-import time
-
 from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,14 +8,14 @@ from tabulate import tabulate
 from tqdm import tqdm
 import yaml
 
-from data_loading import create_matched_df_from_files, determine_validNreference_groups
+from data_loading import create_matched_df_from_files, determine_valid_n_reference_groups, save_pickled_data
 from plot_tools import plot_spider_chart, display_figures_grid
 
 # Step 6: Calculate kappa and bootstrap confidence intervals
-def calculate_kappas_and_intervals(df, ai_cols, n_iter=1000):
+def calculate_kappas_and_intervals(df, truth_col, ai_cols, n_iter=1000):
     kappas = {}
     intervals = {}
-    y_true = df['truth']
+    y_true = df[truth_col]
     y_true_np = np.array(y_true.tolist(), dtype=int)
     for col in ai_cols:
         y_pred = df[col]
@@ -40,13 +37,13 @@ def calculate_kappas_and_intervals(df, ai_cols, n_iter=1000):
     return kappas, intervals
 
 # Custom bootstrap kappa
-def bootstrap_kappa(df, model, n_iter=1000, n_jobs=-1, base_seed=42):
+def bootstrap_kappa(df, truth_col, model, n_iter=1000, n_jobs=-1, base_seed=42):
     # Generate unique seeds for each iteration from the base seed
     seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
 
     def resample_and_compute_kappa(df, model, seed):
         sampled_df = resample(df, replace=True, random_state=seed)
-        return cohen_kappa_score(sampled_df['truth'], sampled_df[model], weights='quadratic')
+        return cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic')
 
     # Use Parallel to run the bootstrap iterations in parallel
     kappas = Parallel(n_jobs=n_jobs)(delayed(resample_and_compute_kappa)(df, model, seed) for seed in seeds)
@@ -54,7 +51,7 @@ def bootstrap_kappa(df, model, n_iter=1000, n_jobs=-1, base_seed=42):
     return kappas
 
 # Custom bootstrap kappa
-def bootstrap_kappa_by_columns(df, model, columns, n_iter=1000, n_jobs=-1, base_seed=42):
+def bootstrap_kappa_by_columns(df, truth_col, model, columns, n_iter=1000, n_jobs=-1, base_seed=42):
     # Ensure columns is a list; if not, wrap it in a list.
     if not isinstance(columns, list):
         columns = [columns]
@@ -62,22 +59,22 @@ def bootstrap_kappa_by_columns(df, model, columns, n_iter=1000, n_jobs=-1, base_
     # Generate unique seeds for each iteration from the base seed
     seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
 
-    def resample_and_compute_kappa(df, model, columns, seed):
+    def resample_and_compute_kappa(df, truth_col, model, columns, seed):
         sampled_groups = []
         for group, group_df in df.groupby(columns):
             n_samples = len(group_df)
             sampled_group = resample(group_df, replace=True, n_samples=n_samples, random_state=seed)
             sampled_groups.append(sampled_group)
         sampled_df = pd.concat(sampled_groups)
-        return cohen_kappa_score(sampled_df['truth'], sampled_df[model], weights='quadratic')
+        return cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic')
 
     kappas = Parallel(n_jobs=n_jobs)(
-        delayed(resample_and_compute_kappa)(df, model, columns, seed)
+        delayed(resample_and_compute_kappa)(df, truth_col, model, columns, seed)
         for seed in seeds
     )
 
 # Step 7: Calculate delta kappa
-def calculate_delta_kappa(df, categories, reference_groups, valid_groups, ai_columns, n_iter=1000):
+def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000):
     delta_kappas = {}
 
     for category in tqdm(categories, desc='Categories', position=0):
@@ -94,7 +91,7 @@ def calculate_delta_kappa(df, categories, reference_groups, valid_groups, ai_col
             # for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
             #     if value == reference_groups[category]:
             #         continue
-            kappas_ref = bootstrap_kappa(ref_filtered_df, model, n_iter)
+            kappas_ref = bootstrap_kappa(ref_filtered_df, truth_col, model, n_iter)
 
             for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=2):
             # for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
@@ -107,7 +104,7 @@ def calculate_delta_kappa(df, categories, reference_groups, valid_groups, ai_col
 
                 filtered_df = df[df[category] == value]
 
-                kappas = bootstrap_kappa(filtered_df, model, n_iter)
+                kappas = bootstrap_kappa(filtered_df, truth_col, model, n_iter)
 
                 deltas = [a - b for a, b in zip(kappas, kappas_ref)]
                 delta_median = np.percentile(deltas, 50)
@@ -115,14 +112,6 @@ def calculate_delta_kappa(df, categories, reference_groups, valid_groups, ai_col
                 delta_kappas[category][model][value] = (delta_median, (lower_value, upper_value))
 
     return delta_kappas
-
-def extract_ai_models(delta_kappas):
-    models = set()
-    for attribute_data in delta_kappas.values():
-        for model_name in attribute_data:
-            if model_name.startswith('ai_'):
-                models.add(model_name)
-    return sorted(models)
 
 def extract_plot_data(delta_kappas, model_name):
     groups = []
@@ -141,9 +130,7 @@ def extract_plot_data(delta_kappas, model_name):
     return groups, values, lower_bounds, upper_bounds
 
 
-def generate_plots_from_delta_kappas(delta_kappas):
-    ai_models = extract_ai_models(delta_kappas)  # in case some of the ai_cols were inconsistent
-
+def generate_plots_from_delta_kappas(delta_kappas, ai_models, plot_config=None):
     # Determine the global range across all models for consistent scaling
     all_values = []
     all_lower = []
@@ -162,7 +149,7 @@ def generate_plots_from_delta_kappas(delta_kappas):
     figures = []
     for model in ai_models:
         groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
-        fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max)
+        fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max, metric='QWK', plot_config=plot_config)
         figures.append(fig)
 
     display_figures_grid(figures)
@@ -189,6 +176,9 @@ def print_table_from_dict(delta_kappas, tablefmt="grid"):
                         round(upper_ci, 4)
                     ])
 
+    # Sort results by model, category, then group.
+    results.sort(key=lambda row: (row[0], row[1], row[2]))
+
     # Print the table if there are any entries.
     if results:
         print(f"Delta Kappa values with 95% CI excluding zero:")
@@ -203,28 +193,28 @@ if __name__ == '__main__':
     with open('config.yaml', 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
-    matched_df, categories = create_matched_df_from_files(config['input data'], config['numeric_cols'])
+    matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
 
-    reference_groups, valid_groups, _ = determine_validNreference_groups(matched_df, categories)
-
-    # Determine AI columns (excluding 'case_name' and 'truth')
-    ai_cols = [col for col in matched_df.columns if col.startswith('ai_')]
+    reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
 
     np.random.seed(42)  # For reproducibility
-    kappas, intervals = calculate_kappas_and_intervals(matched_df, ai_cols)
-    # print(f"Mean Kappas: {kappas}")
-    # print(f"Confidence Intervals: {intervals}")
+    truth_col = config['input data'].get('truth column', 'truth')
+    kappas, intervals = calculate_kappas_and_intervals(matched_df, truth_col, test_cols)
 
     # Calculate delta Kappas
     print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
     np.random.seed(42)  # For reproducibility
     # categories = ['race', 'ethnicity']  # Speed things up during development by reducing the number of categories
-    delta_kappas = calculate_delta_kappa(matched_df, categories, reference_groups, valid_groups, ai_cols)
+    delta_kappas = calculate_delta_kappa(matched_df,
+                                         categories,
+                                         reference_groups,
+                                         valid_groups,
+                                         truth_col,
+                                         test_cols,
+                                         n_iter=1000,
+                                         )
     print_table_from_dict(delta_kappas, tablefmt="rounded_outline")
 
-    generate_plots_from_delta_kappas(delta_kappas)
+    generate_plots_from_delta_kappas(delta_kappas, test_cols, plot_config=config['plot'])
 
-    if config['output']['save_delta_kappas']:
-        filename = f"{config['output']['delta_kappas_file_prefix']}{time.strftime('%Y%m%d%H%M%S')}.pkl"
-        with open(filename, 'wb') as f:
-            pickle.dump(delta_kappas, f)
+    save_pickled_data(config['output'], 'QWK', delta_kappas)
