@@ -2,14 +2,14 @@
 
 import pickle
 import time
-from typing import List
+from typing import List, Tuple
 
 import pandas as pd
 
 from data_preprocessing import bin_dataframe_column
 
 
-def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict) -> [pd.DataFrame, list, list]:
+def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict) -> Tuple[pd.DataFrame, list, list]:
     """
     Create a matched DataFrame from the truth and test files
 
@@ -54,7 +54,7 @@ def match_cases(df1, df2, column) -> pd.DataFrame:
 
 
 # Step 5: Determine reference groups
-def determine_valid_n_reference_groups(df, categories, min_count=10) -> [dict, dict, pd.DataFrame]:
+def determine_valid_n_reference_groups(df, categories, min_count=10) -> Tuple[dict, dict, pd.DataFrame]:
     """
     Determine the valid and reference groups for the given categories
 
