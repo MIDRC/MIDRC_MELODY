@@ -1,7 +1,7 @@
-from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from sklearn.utils import resample
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
@@ -9,44 +9,64 @@ import yaml
 
 from data_loading import determine_valid_n_reference_groups, create_matched_df_from_files, save_pickled_data
 from plot_tools import plot_spider_chart, display_figures_grid
+from typing import List, Dict, Any, Tuple, Optional, Union
 
+def check_required_columns(df: pd.DataFrame, columns: List[str]) -> None:
+    """Raise an error if any required column is missing."""
+    missing = [col for col in columns if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
 
-# Helper to dynamically binarize based on threshold (e.g., 4)
-def binarize_scores(df, truth_col, ai_cols, threshold=4):
+def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4) -> pd.DataFrame:
+    """
+    Binarize scores based on a threshold for truth and AI columns.
+    Converts values greater than or equal to threshold to 1, else 0.
+    """
     if not isinstance(ai_cols, list):
         ai_cols = [ai_cols]
-
-    for col in [truth_col] + ai_cols:
-        df[col] = (df[col] >= threshold).astype(int)
+    cols = [truth_col] + ai_cols
+    check_required_columns(df, cols)
+    df[cols] = (df[cols] >= threshold).astype(int)
     return df
 
-
-def resample_by_column(df, col, seed):
-    # Resample each group by column using the same seed across groups.
+def resample_by_column(df: pd.DataFrame, col: str, seed: int) -> pd.DataFrame:
+    """
+    Resample each group in a DataFrame by the specified column
+    using the same seed across groups.
+    """
     sampled_groups = [
         resample(group_df, replace=True, n_samples=len(group_df), random_state=seed)
         for _, group_df in df.groupby(col)
     ]
     return pd.concat(sampled_groups)
 
-
-def compute_bootstrap_eod_aaod(df, category, ref_group, value, truth_col, ai_columns, seed):
+def compute_bootstrap_eod_aaod(
+    df: pd.DataFrame,
+    category: str,
+    ref_group: Any,
+    group_value: Any,
+    truth_col: str,
+    ai_columns: List[str],
+    seed: int
+) -> Dict[str, Tuple[float, float]]:
+    """
+    Compute bootstrap estimates for EOD and AAOD metrics.
+    """
     sample_df = resample_by_column(df, category, seed)
     ref_df = sample_df[sample_df[category] == ref_group]
-    group_df = sample_df[sample_df[category] == value]
+    group_df = sample_df[sample_df[category] == group_value]
 
     # Precompute truth masks for both reference and group DataFrames
     ref_truth_pos = (ref_df[truth_col] == 1)
-    ref_truth_neg = ~ref_truth_pos  # equivalent to ref_df[truth_col] == 0
+    ref_truth_neg = ~ref_truth_pos
     group_truth_pos = (group_df[truth_col] == 1)
-    group_truth_neg = ~group_truth_pos  # equivalent to group_df[truth_col] == 0
+    group_truth_neg = ~group_truth_pos
 
-    results = {}
+    results: Dict[str, Tuple[float, float]] = {}
     for model in ai_columns:
         ref_pred = (ref_df[model] == 1)
         group_pred = (group_df[model] == 1)
 
-        # Use the precomputed masks to calculate sums for numerator and denominator
         tpr_ref = ref_pred[ref_truth_pos].sum() / ref_truth_pos.sum() if ref_truth_pos.sum() else np.nan
         fpr_ref = ref_pred[ref_truth_neg].sum() / ref_truth_neg.sum() if ref_truth_neg.sum() else np.nan
         tpr_group = group_pred[group_truth_pos].sum() / group_truth_pos.sum() if group_truth_pos.sum() else np.nan
@@ -58,10 +78,23 @@ def compute_bootstrap_eod_aaod(df, category, ref_group, value, truth_col, ai_col
 
     return results
 
-
-def calculate_eod_aaod(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000, base_seed=None):
-    eod_aaod = {category: {model: {} for model in ai_columns} for category in categories}
-    rng = np.random.RandomState(base_seed)  # For reproducibility
+def calculate_eod_aaod(
+    df: pd.DataFrame,
+    categories: List[str],
+    reference_groups: Dict[str, Any],
+    valid_groups: Dict[str, List[Any]],
+    truth_col: str,
+    ai_columns: List[str],
+    n_iter: int = 1000,
+    base_seed: Optional[int] = None
+) -> Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]]:
+    """
+    Calculate EOD and AAOD metrics with bootstrap iterations for multiple categories.
+    """
+    eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]] = {
+        category: {model: {} for model in ai_columns} for category in categories
+    }
+    rng = np.random.default_rng(base_seed)
 
     for category in tqdm(categories, desc='Categories', position=0):
         if category not in valid_groups:
@@ -70,60 +103,74 @@ def calculate_eod_aaod(df, categories, reference_groups, valid_groups, truth_col
         ref_group = reference_groups[category]
         unique_values = df[category].unique()
 
-        for value in tqdm(unique_values, desc=f"Category \'{category}\' Groups", leave=False, position=1):
-            if value == ref_group or value not in valid_groups[category]:
+        for group_value in tqdm(unique_values, desc=f"Category \'{category}\' Groups", leave=False, position=1):
+            if group_value == ref_group or group_value not in valid_groups[category]:
                 continue
 
             eod_samples = {model: [] for model in ai_columns}
             aaod_samples = {model: [] for model in ai_columns}
 
             # Preassign seeds for each bootstrap iteration.
-            seeds = rng.randint(0, 1_000_000, size=n_iter)
+            seeds = rng.integers(0, 1_000_000, size=n_iter)
 
-            # Run bootstrap iterations in parallel.
-            with tqdm_joblib(total=n_iter, desc=f"Bootstrapping \'{value}\' Group", leave=False):
+            with tqdm_joblib(total=n_iter, desc=f"Bootstrapping \'{group_value}\' Group", leave=False):
                 bootstrap_results = Parallel(n_jobs=-1)(
                     delayed(compute_bootstrap_eod_aaod)(
-                        df, category, ref_group, value, truth_col, ai_columns, seed
+                        df, category, ref_group, group_value, truth_col, ai_columns, seed
                     ) for seed in seeds
                 )
 
-            # Collect bootstrap samples.
             for result in bootstrap_results:
                 for model in ai_columns:
                     eod_samples[model].append(result[model][0])
                     aaod_samples[model].append(result[model][1])
 
-            # Compute median and 95% confidence intervals.
             for model in ai_columns:
                 eod_median = np.median(eod_samples[model])
                 aaod_median = np.median(aaod_samples[model])
                 eod_ci = np.percentile(eod_samples[model], [2.5, 97.5])
                 aaod_ci = np.percentile(aaod_samples[model], [2.5, 97.5])
-                eod_aaod[category][model][value] = {
+                eod_aaod[category][model][group_value] = {
                     'eod': (eod_median, eod_ci),
                     'aaod': (aaod_median, aaod_ci)
                 }
     return eod_aaod
 
-# Data extraction for plotting (similar to delta kappa)
-def extract_plot_data_eod_aaod(eod_aaod, model, metric='eod'):
-    groups, values, lower_bounds, upper_bounds = [], [], [], []
-    
-    for attribute, attribute_data in eod_aaod.items():
-        if model in attribute_data:
-            for group, metrics in attribute_data[model].items():
-                groups.append(f"{attribute}: {group}")
+def extract_plot_data_eod_aaod(
+    eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]],
+    model: str,
+    metric: str = 'eod'
+) -> Tuple[List[str], List[float], List[float], List[float]]:
+    """
+    Extract groups, metric values and confidence intervals for plotting.
+    """
+    groups: List[str] = []
+    values: List[float] = []
+    lower_bounds: List[float] = []
+    upper_bounds: List[float] = []
+
+    for category, model_data in eod_aaod.items():
+        if model in model_data:
+            for group, metrics in model_data[model].items():
+                groups.append(f"{category}: {group}")
                 value, (lower, upper) = metrics[metric]
                 values.append(value)
                 lower_bounds.append(lower)
                 upper_bounds.append(upper)
-                
+
     return groups, values, lower_bounds, upper_bounds
 
-def generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=['eod', 'aaod']):
-    all_values = []
-    plot_data_dict = {}
+def generate_plot_data_eod_aaod(
+    eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]],
+    test_cols: List[str],
+    metrics: List[str] = ['eod', 'aaod']
+) -> Tuple[Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]], float, float]:
+    """
+    Generate plot data for each metric and compute global axis limits.
+    """
+    plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]] = {}
+    all_values: List[float] = []
+
     for metric in metrics:
         plot_data_dict[metric] = {}
         for model in test_cols:
@@ -132,50 +179,61 @@ def generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=['eod', 'aaod']):
             all_values.extend(lower + upper)
 
     global_min, global_max = min(all_values) - 0.05, max(all_values) + 0.05
-
     return plot_data_dict, global_min, global_max
 
-def plot_data_eod_aaod(plot_data_dict, test_cols, metrics=['eod', 'aaod'], plot_config=None):
-    figures_dict = {metric: [] for metric in metrics}
+def plot_data_eod_aaod(
+    plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]],
+    test_cols: List[str],
+    metrics: List[str] = ['eod', 'aaod'],
+    plot_config: Optional[Dict[str, Any]] = None,
+    global_min: float = 0.0,
+    global_max: float = 1.0
+) -> Dict[str, List[Any]]:
+    """
+    Plot EOD and AAOD spider charts for each model.
+    """
+    figures_dict: Dict[str, List[Any]] = {metric: [] for metric in metrics}
     for metric in metrics:
-        metric_dict = plot_data_dict[metric]
         for model in test_cols:
-            groups, values, lower, upper = metric_dict[model]
-            fig = plot_spider_chart(groups, values, lower, upper, model, global_min, global_max, metric=metric, plot_config=plot_config)
+            groups, values, lower, upper = plot_data_dict[metric][model]
+            fig = plot_spider_chart(groups, values, lower, upper, model, global_min, global_max,
+                                    metric=metric, plot_config=plot_config)
             figures_dict[metric].append(fig)
 
-    for _, figures in figures_dict.items():
+    for figures in figures_dict.values():
         display_figures_grid(figures)
 
     return figures_dict
 
-# Example pipeline (wrap this into main if you want)
 if __name__ == '__main__':
     # Load configuration
     with open('config.yaml', 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
     matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
-
     reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
     truth_col = config['input data'].get('truth column', 'truth')
 
-    # Binarize
+    # Check required columns before further processing
+    required_columns = [truth_col] + test_cols + categories
+    check_required_columns(matched_df, required_columns)
+
+    # Binarize scores
     matched_df = binarize_scores(matched_df, truth_col, test_cols, threshold=4)
 
-    # EOD & AAOD Calculation
+    # EOD & AAOD calculation
     bootstrap_config = config.get('bootstrap', {})
-    rand_seed = bootstrap_config.get('seed', None)
+    base_seed = bootstrap_config.get('seed', None)
     n_iter = bootstrap_config.get('iterations', 1000)
-    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups, truth_col, test_cols, n_iter=n_iter, base_seed=rand_seed)
+    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups,
+                                  truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
 
     metrics = ['eod', 'aaod']
     plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)
+    figures_dict = plot_data_eod_aaod(plot_data_dict, test_cols, metrics=metrics, plot_config=config['plot'],
+                                      global_min=global_min, global_max=global_max)
 
-    # Plot all models
-    figures_dict = plot_data_eod_aaod(plot_data_dict, test_cols, metrics=metrics, plot_config=config['plot'])
-
-    plt.show()  # Show all figures at once
+    plt.show()
 
     for metric in metrics:
         save_pickled_data(config['output'], metric, plot_data_dict[metric])

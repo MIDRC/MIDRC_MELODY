@@ -11,115 +11,150 @@ import yaml
 
 from data_loading import create_matched_df_from_files, determine_valid_n_reference_groups, save_pickled_data
 from plot_tools import plot_spider_chart, display_figures_grid
+from typing import List, Dict, Tuple, Any, Optional, Union
 
-# Step 6: Calculate kappa and bootstrap confidence intervals
-def calculate_kappas_and_intervals(df, truth_col, ai_cols, n_iter=1000, base_seed=None):
-    np.random.seed(base_seed)  # For reproducibility
-    kappas = {}
-    intervals = {}
-    y_true = df[truth_col]
-    y_true_np = np.array(y_true.tolist(), dtype=int)
+def calculate_kappas_and_intervals(
+    df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], n_iter: int = 1000, base_seed: Optional[int] = None
+) -> Tuple[Dict[str, float], Dict[str, Tuple[float, float]]]:
+    """
+    Calculate Cohen's quadratic kappa and bootstrap confidence intervals.
+    """
+    if not isinstance(ai_cols, list):
+        ai_cols = [ai_cols]
+    kappas: Dict[str, float] = {}
+    intervals: Dict[str, Tuple[float, float]] = {}
+    y_true = df[truth_col].to_numpy(dtype=int)
+
+    # Using a modern random generator for reproducibility.
+    rng = np.random.default_rng(base_seed)
     for col in ai_cols:
-        y_pred = df[col]
-        y_pred_np = np.array(y_pred.tolist(), dtype=int)
-        kappa = cohen_kappa_score(y_true_np, y_pred_np, weights='quadratic')
+        y_pred = df[col].to_numpy(dtype=int)
+        kappa = cohen_kappa_score(y_true, y_pred, weights='quadratic')
         kappas[col] = kappa
 
         kappa_scores = []
         for _ in range(n_iter):
-            indices = np.random.choice(len(y_true_np), len(y_true_np), replace=True)
-            kappa_bs = cohen_kappa_score(y_true_np[indices], y_pred_np[indices], weights='quadratic')
+            indices = rng.integers(0, len(y_true), size=len(y_true))
+            kappa_bs = cohen_kappa_score(y_true[indices], y_pred[indices], weights='quadratic')
             kappa_scores.append(kappa_bs)
-        kappa_scores = sorted(kappa_scores)
+        kappa_scores.sort()
         lower_bnd = kappa_scores[int(0.025 * n_iter)]
         upper_bnd = kappa_scores[int(0.975 * n_iter)]
         intervals[col] = (lower_bnd, upper_bnd)
-        print(f"Model: {col} | Kappa: {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true_np)}")
-        
+        print(f"Model: {col} | Kappa: {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true)}")
+
     return kappas, intervals
 
-
-def bootstrap_kappa(df, truth_col, models, n_iter=1000, n_jobs=-1, base_seed=None):
-    # Convert models to a list if possible.
+def bootstrap_kappa(
+    df: pd.DataFrame, truth_col: str, models: Union[List[str], Any], n_iter: int = 1000,
+    n_jobs: int = -1, base_seed: Optional[int] = None
+) -> Dict[str, Tuple]:
+    """
+    Perform bootstrap estimation of kappa scores for each model in parallel.
+    """
     if not isinstance(models, list):
         try:
             models = models.tolist()
         except AttributeError:
             models = [models]
+    rng = np.random.default_rng(base_seed)
+    seeds = rng.integers(0, 1_000_000, size=n_iter)
 
-    # Generate unique seeds for each iteration
-    seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
-
-    def resample_and_compute_kappa(df, truth_col, models, seed):
+    def resample_and_compute_kappa(df: pd.DataFrame, truth_col: str, models: List[str], seed: int) -> List[float]:
         sampled_df = resample(df, replace=True, random_state=seed)
-        # Compute kappa scores for each model.
-        return [cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic') for model in models]
+        return [
+            cohen_kappa_score(sampled_df[truth_col].to_numpy(dtype=int),
+                              sampled_df[model].to_numpy(dtype=int),
+                              weights='quadratic')
+            for model in models
+        ]
 
-    # Wrap the Parallel call with tqdm_joblib for a progress bar.
-    with tqdm_joblib(total=n_iter, desc=f"Bootstrapping", leave=False):
+    with tqdm_joblib(total=n_iter, desc=r"Bootstrapping", leave=False):
         kappas_2d = Parallel(n_jobs=n_jobs)(
-            delayed(resample_and_compute_kappa)(df, truth_col, models, seed) for seed in seeds
+            delayed(resample_and_compute_kappa)(df, truth_col, models, seed)
+            for seed in seeds
         )
-    # Transpose the 2D list to be a dict mapping each model to its list of bootstrap kappas.
     kappa_dict = dict(zip(models, zip(*kappas_2d)))
-
     return kappa_dict
 
+def calculate_delta_kappa(
+    df: pd.DataFrame, categories: List[str], reference_groups: Dict[str, Any], valid_groups: Dict[str, List[Any]],
+    truth_col: str, ai_columns: List[str], n_iter: int = 1000, base_seed: Optional[int] = None
+) -> Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]]:
+    """
+    Calculate delta kappa (difference between group and reference) with bootstrap confidence intervals.
+    """
+    delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]] = {}
+    rng = np.random.default_rng(base_seed)
 
-def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000, base_seed=None):
-    delta_kappas = {}
-    rng = np.random.RandomState(base_seed)
-
-    for category in tqdm(categories, desc='Categories', position=0):
+    for category in tqdm(categories, desc=r"Categories", position=0):
         if category not in valid_groups:
             continue
 
         delta_kappas[category] = {model: {} for model in ai_columns}
-        unique_values = df[category].unique()
-        # Pre-filter reference DataFrame once per category
-        ref_df = df[df[category] == reference_groups[category]]
+        unique_values = df[category].unique().tolist()
 
-        # Precompute bootstrap kappa for each model on the reference group once per category.
-        ref_bootstraps = bootstrap_kappa(ref_df, truth_col, ai_columns, n_iter, base_seed=rng.randint(0, 1_000_000))
-
-        for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
-            # Skip values that do not qualify.
-            if value == reference_groups[category] or value not in valid_groups[category]:
+        kappa_dicts = {}
+        for value in tqdm(unique_values, desc=f"Category \033[1m{category}\033[0m Groups", leave=False, position=1):
+            if value not in valid_groups[category]:
                 continue
 
             filtered_df = df[df[category] == value]
-            # Generate a seed for this group.
-            group_seed = rng.randint(0, 1_000_000)
-            kappa_dict = bootstrap_kappa(filtered_df, truth_col, ai_columns, n_iter, base_seed=group_seed)
-            for model, model_kappas in kappa_dict.items():
-                deltas = np.array(model_kappas) - np.array(ref_bootstraps[model])
-                delta_median = np.median(deltas)
-                lower_value, upper_value = np.percentile(deltas, [2.5, 97.5])
-                delta_kappas[category][model][value] = (delta_median, (lower_value, upper_value))
+            group_seed = int(rng.integers(0, 1_000_000))
+
+            kappa_dicts[value] = bootstrap_kappa(
+                filtered_df,
+                truth_col,
+                ai_columns,
+                n_iter,
+                base_seed=group_seed,
+            )
+
+            # Remove and store reference bootstraps.
+            ref_bootstraps = kappa_dicts.pop(reference_groups[category])
+
+            # Now calculate the differences.
+            for value, kappa_dict in kappa_dicts.items():
+                for model in ai_columns:
+                    model_boot = np.array(kappa_dict[model])
+                    ref_boot = np.array(ref_bootstraps[model])
+                    deltas = model_boot - ref_boot
+                    delta_median = float(np.median(deltas))
+                    lower_value, upper_value = np.percentile(deltas, [2.5, 97.5])
+                    delta_kappas[category][model][value] = (
+                        delta_median,
+                        (float(lower_value), float(upper_value))
+                    )
     return delta_kappas
 
-def extract_plot_data(delta_kappas, model_name):
-    groups = []
-    values = []
-    lower_bounds = []
-    upper_bounds = []
-    
-    for attribute, attribute_data in delta_kappas.items():
-        if model_name in attribute_data:
-            for group, (value, ci) in attribute_data[model_name].items():
-                groups.append(f"{attribute}: {group}")
+def extract_plot_data(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
+                      model_name: str) -> Tuple[List[str], List[float], List[float], List[float]]:
+    """
+    Extract group names, delta values and confidence intervals for plotting.
+    """
+    groups: List[str] = []
+    values: List[float] = []
+    lower_bounds: List[float] = []
+    upper_bounds: List[float] = []
+
+    for category, model_data in delta_kappas.items():
+        if model_name in model_data:
+            for group, (value, (lower_ci, upper_ci)) in model_data[model_name].items():
+                groups.append(f"{category}: {group}")
                 values.append(value)
-                lower_bounds.append(ci[0])
-                upper_bounds.append(ci[1])
-                
+                lower_bounds.append(lower_ci)
+                upper_bounds.append(upper_ci)
     return groups, values, lower_bounds, upper_bounds
 
-
-def generate_plots_from_delta_kappas(delta_kappas, ai_models, plot_config=None):
-    # Determine the global range across all models for consistent scaling
-    all_values = []
-    all_lower = []
-    all_upper = []
+def generate_plots_from_delta_kappas(
+    delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
+    ai_models: List[str],
+    plot_config: Optional[Dict[str, Any]] = None
+) -> None:
+    """
+    Generate spider plots for delta kappas using consistent scale across models.
+    """
+    all_values, all_lower, all_upper = [], [], []
 
     for model in ai_models:
         _, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
@@ -127,30 +162,28 @@ def generate_plots_from_delta_kappas(delta_kappas, ai_models, plot_config=None):
         all_lower.extend(lower_bounds)
         all_upper.extend(upper_bounds)
 
-    global_min = min(all_lower) - 0.05  # Padding for better visualization
+    global_min = min(all_lower) - 0.05
     global_max = max(all_upper) + 0.05
 
-    # Plot for each AI model
     figures = []
     for model in ai_models:
         groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
-        fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max, metric='QWK', plot_config=plot_config)
+        fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max,
+                                metric=r"QWK", plot_config=plot_config)
         figures.append(fig)
 
     display_figures_grid(figures)
-
-    # Finally, show all charts with one plt.show() call
     plt.show()
 
-def print_table_from_dict(delta_kappas, tablefmt="grid"):
-    from tabulate import tabulate
-
-    # Gather results that meet the condition that 0 is not in the CI.
+def print_table_from_dict(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
+                          tablefmt: str = r"grid") -> None:
+    """
+    Print a table of delta kappas that have a 95% CI excluding zero.
+    """
     results = []
     for category, model_data in delta_kappas.items():
         for model, groups in model_data.items():
             for group, (delta, (lower_ci, upper_ci)) in groups.items():
-                # Only include when the CI excludes 0.
                 if lower_ci > 0 or upper_ci < 0:
                     results.append([
                         model,
@@ -160,48 +193,29 @@ def print_table_from_dict(delta_kappas, tablefmt="grid"):
                         round(lower_ci, 4),
                         round(upper_ci, 4)
                     ])
-
-    # Sort results by model, category, then group.
     results.sort(key=lambda row: (row[0], row[1], row[2]))
-
-    # Print the table if there are any entries.
     if results:
-        print(f"Delta Kappa values with 95% CI excluding zero:")
-        headers = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
+        print(r"Delta Kappa values with 95% CI excluding zero:")
+        headers = [r"Model", r"Category", r"Group", r"Delta Kappa", r"Lower CI", r"Upper CI"]
         print(tabulate(results, headers=headers, tablefmt=tablefmt))
     else:
-        print("No model/group combinations with a CI excluding zero.")
+        print(r"No model/group combinations with a CI excluding zero.")
 
-# Main execution
 if __name__ == '__main__':
-    # Load configuration
-    with open('config.yaml', 'r', encoding='utf-8') as stream:
+    with open(r'config.yaml', r'r', encoding=r'utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
-    matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
-
+    matched_df, categories, test_cols = create_matched_df_from_files(config[r'input data'], config[r'numeric_cols'])
     reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
+    bootstrap_config = config.get(r'bootstrap', {})
+    base_seed = bootstrap_config.get(r'seed', None)
+    n_iter = bootstrap_config.get(r'iterations', 1000)
+    truth_col = config[r'input data'].get(r'truth column', r'truth')
 
-    bootstrap_config = config.get('bootstrap', {})
-    rand_seed = bootstrap_config.get('seed', None)
-    n_iter = bootstrap_config.get('iterations', 1000)
-
-    truth_col = config['input data'].get('truth column', 'truth')
-    kappas, intervals = calculate_kappas_and_intervals(matched_df, truth_col, test_cols, base_seed=rand_seed)
-
-    # Calculate delta Kappas
-    print(f"Bootstrapping delta Kappas, this may take a while", flush=True)
-    delta_kappas = calculate_delta_kappa(matched_df,
-                                         categories,
-                                         reference_groups,
-                                         valid_groups,
-                                         truth_col,
-                                         test_cols,
-                                         n_iter=n_iter,
-                                         base_seed=rand_seed,
-                                         )
-    print_table_from_dict(delta_kappas, tablefmt="rounded_outline")
-
-    generate_plots_from_delta_kappas(delta_kappas, test_cols, plot_config=config['plot'])
-
-    save_pickled_data(config['output'], 'QWK', delta_kappas)
+    kappas, intervals = calculate_kappas_and_intervals(matched_df, truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
+    print(r"Bootstrapping delta Kappas, this may take a while", flush=True)
+    delta_kappas = calculate_delta_kappa(matched_df, categories, reference_groups, valid_groups,
+                                         truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
+    print_table_from_dict(delta_kappas, tablefmt=r"rounded_outline")
+    generate_plots_from_delta_kappas(delta_kappas, test_cols, plot_config=config[r'plot'])
+    save_pickled_data(config[r'output'], r"QWK", delta_kappas)

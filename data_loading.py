@@ -25,7 +25,7 @@ def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict):
             df_truth = bin_dataframe_column(df_truth, num_col, str_col, bins=bins, labels=labels)
             categories = categories.map(lambda x: str_col if x == num_col else x)
 
-    return match_cases(df_truth, df_test, uid_col), categories, test_columns
+    return match_cases(df_truth, df_test, uid_col), categories.tolist(), test_columns.tolist()
 
 
 def match_cases(df1, df2, column):
