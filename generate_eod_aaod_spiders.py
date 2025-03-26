@@ -1,3 +1,5 @@
+"""This script generates EOD and AAOD spider plots for multiple models across different categories."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -11,8 +13,14 @@ from data_loading import determine_valid_n_reference_groups, create_matched_df_f
 from plot_tools import plot_spider_chart, display_figures_grid
 from typing import List, Dict, Any, Tuple, Optional, Union
 
+
 def check_required_columns(df: pd.DataFrame, columns: List[str]) -> None:
-    """Raise an error if any required column is missing."""
+    """
+    Raise an error if any required column is missing.
+
+    :arg df: DataFrame to check for required columns.
+    :arg columns: List of required columns.
+    """
     missing = [col for col in columns if col not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
@@ -21,6 +29,13 @@ def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], 
     """
     Binarize scores based on a threshold for truth and AI columns.
     Converts values greater than or equal to threshold to 1, else 0.
+
+    :arg df: DataFrame containing truth and test columns.
+    :arg truth_col: Name of the truth column.
+    :arg ai_cols: Name of the test column or a list of test columns.
+    :arg threshold: Threshold value for binarization.
+
+    :returns: DataFrame with binarized columns.
     """
     if not isinstance(ai_cols, list):
         ai_cols = [ai_cols]
@@ -33,6 +48,12 @@ def resample_by_column(df: pd.DataFrame, col: str, seed: int) -> pd.DataFrame:
     """
     Resample each group in a DataFrame by the specified column
     using the same seed across groups.
+
+    :arg df: DataFrame to resample.
+    :arg col: Column to group by.
+    :arg seed: Seed for reproducibility across groups.
+
+    :returns: Resampled DataFrame.
     """
     sampled_groups = [
         resample(group_df, replace=True, n_samples=len(group_df), random_state=seed)
@@ -51,6 +72,16 @@ def compute_bootstrap_eod_aaod(
 ) -> Dict[str, Tuple[float, float]]:
     """
     Compute bootstrap estimates for EOD and AAOD metrics.
+
+    :arg df: DataFrame containing truth and test columns.
+    :arg category: Column to group by.
+    :arg ref_group: Reference group value.
+    :arg group_value: Group value to compare against reference.
+    :arg truth_col: Name of the truth column.
+    :arg ai_columns: List of test columns.
+    :arg seed: Seed for reproducibility.
+
+    :returns: Dictionary of EOD and AAOD values for each model.
     """
     sample_df = resample_by_column(df, category, seed)
     ref_df = sample_df[sample_df[category] == ref_group]
@@ -90,6 +121,17 @@ def calculate_eod_aaod(
 ) -> Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]]:
     """
     Calculate EOD and AAOD metrics with bootstrap iterations for multiple categories.
+
+    :arg df: DataFrame containing truth and test columns.
+    :arg categories: List of columns to group by.
+    :arg reference_groups: Dictionary of reference groups for each category.
+    :arg valid_groups: Dictionary of valid groups for each category.
+    :arg truth_col: Name of the truth column.
+    :arg ai_columns: List of test columns.
+    :arg n_iter: Number of bootstrap iterations.
+    :arg base_seed: Base seed for reproducibility.
+
+    :returns: Dictionary of EOD and AAOD values for each model.
     """
     eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]] = {
         category: {model: {} for model in ai_columns} for category in categories
@@ -143,6 +185,12 @@ def extract_plot_data_eod_aaod(
 ) -> Tuple[List[str], List[float], List[float], List[float]]:
     """
     Extract groups, metric values and confidence intervals for plotting.
+
+    :arg eod_aaod: Dictionary of EOD and AAOD values for each model.
+    :arg model: Name of the model to extract data for.
+    :arg metric: Metric to extract data for (EOD or AAOD).
+
+    :returns: Tuple of groups, values, lower bounds and upper bounds.
     """
     groups: List[str] = []
     values: List[float] = []
@@ -163,10 +211,16 @@ def extract_plot_data_eod_aaod(
 def generate_plot_data_eod_aaod(
     eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]],
     test_cols: List[str],
-    metrics: List[str] = ['eod', 'aaod']
+    metrics: List[str] = ('eod', 'aaod')
 ) -> Tuple[Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]], float, float]:
     """
     Generate plot data for each metric and compute global axis limits.
+
+    :arg eod_aaod: Dictionary of EOD and AAOD values for each model.
+    :arg test_cols: List of test columns.
+    :arg metrics: List of metrics to plot.
+
+    :returns: Tuple of plot data dictionary, global minimum and maximum values.
     """
     plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]] = {}
     all_values: List[float] = []
@@ -184,13 +238,22 @@ def generate_plot_data_eod_aaod(
 def plot_data_eod_aaod(
     plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]],
     test_cols: List[str],
-    metrics: List[str] = ['eod', 'aaod'],
+    metrics: List[str] = ('eod', 'aaod'),
     plot_config: Optional[Dict[str, Any]] = None,
     global_min: float = 0.0,
     global_max: float = 1.0
 ) -> Dict[str, List[Any]]:
     """
     Plot EOD and AAOD spider charts for each model.
+
+    :arg plot_data_dict: Dictionary of plot data for each metric and model.
+    :arg test_cols: List of test columns.
+    :arg metrics: List of metrics to plot.
+    :arg plot_config: Optional configuration for plotting.
+    :arg global_min: Global minimum value for the y-axis.
+    :arg global_max: Global maximum value for the y-axis.
+
+    :returns: Dictionary of generated figures for each metric.
     """
     figures_dict: Dict[str, List[Any]] = {metric: [] for metric in metrics}
     for metric in metrics:

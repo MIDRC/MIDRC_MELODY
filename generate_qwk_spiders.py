@@ -1,3 +1,5 @@
+"""This script generates QWK spider plots for multiple models across different categories."""
+
 from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,11 +15,20 @@ from data_loading import create_matched_df_from_files, determine_valid_n_referen
 from plot_tools import plot_spider_chart, display_figures_grid
 from typing import List, Dict, Tuple, Any, Optional, Union
 
+
 def calculate_kappas_and_intervals(
     df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], n_iter: int = 1000, base_seed: Optional[int] = None
 ) -> Tuple[Dict[str, float], Dict[str, Tuple[float, float]]]:
     """
-    Calculate Cohen's quadratic kappa and bootstrap confidence intervals.
+    Calculate Cohen's quadratic weighted kappa and bootstrap confidence intervals.
+
+    :arg df: DataFrame containing the truth and AI columns.
+    :arg truth_col: Column name of the truth labels.
+    :arg ai_cols: List of AI column names.
+    :arg n_iter: Number of bootstrap iterations.
+    :arg base_seed: Base seed for reproducibility.
+
+    :returns: Tuple of dictionaries containing kappa scores and 95% confidence intervals.
     """
     if not isinstance(ai_cols, list):
         ai_cols = [ai_cols]
@@ -50,7 +61,16 @@ def bootstrap_kappa(
     n_jobs: int = -1, base_seed: Optional[int] = None
 ) -> Dict[str, Tuple]:
     """
-    Perform bootstrap estimation of kappa scores for each model in parallel.
+    Perform bootstrap estimation of quadratic weighted kappa scores for each model in parallel.
+
+    :arg df: DataFrame containing the truth and AI columns.
+    :arg truth_col: Column name of the truth labels.
+    :arg models: List of test column names.
+    :arg n_iter: Number of bootstrap iterations.
+    :arg n_jobs: Number of parallel jobs.
+    :arg base_seed: Base seed for reproducibility.
+
+    :returns: Dictionary of model names and their corresponding kappa scores.
     """
     if not isinstance(models, list):
         try:
@@ -83,6 +103,17 @@ def calculate_delta_kappa(
 ) -> Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]]:
     """
     Calculate delta kappa (difference between group and reference) with bootstrap confidence intervals.
+
+    :arg df: DataFrame containing the truth and AI columns.
+    :arg categories: List of category column names.
+    :arg reference_groups: Dictionary of reference groups for each category.
+    :arg valid_groups: Dictionary of valid groups for each category.
+    :arg truth_col: Column name of the truth labels.
+    :arg ai_columns: List of test column names.
+    :arg n_iter: Number of bootstrap iterations.
+    :arg base_seed: Base seed for reproducibility.
+
+    :returns: Dictionary of delta quadratic weighted kappa values with 95% confidence intervals.
     """
     delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]] = {}
     rng = np.random.default_rng(base_seed)
@@ -131,6 +162,11 @@ def extract_plot_data(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, T
                       model_name: str) -> Tuple[List[str], List[float], List[float], List[float]]:
     """
     Extract group names, delta values and confidence intervals for plotting.
+
+    :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
+    :arg model_name: Name of the AI model.
+
+    :returns: Tuple of group names, delta values, lower bounds and upper bounds.
     """
     groups: List[str] = []
     values: List[float] = []
@@ -153,6 +189,10 @@ def generate_plots_from_delta_kappas(
 ) -> None:
     """
     Generate spider plots for delta kappas using consistent scale across models.
+
+    :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
+    :arg ai_models: List of test columns (AI model names).
+    :arg plot_config: Optional configuration dictionary for plotting
     """
     all_values, all_lower, all_upper = [], [], []
 
@@ -179,6 +219,9 @@ def print_table_from_dict(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[floa
                           tablefmt: str = r"grid") -> None:
     """
     Print a table of delta kappas that have a 95% CI excluding zero.
+
+    :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
+    :arg tablefmt: Table format string for tabulate.
     """
     results = []
     for category, model_data in delta_kappas.items():

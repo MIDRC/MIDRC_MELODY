@@ -1,7 +1,25 @@
+""" Plotting tools for visualizing model performance metrics. """
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max, metric=None, plot_config: dict = None):
+
+def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max, metric=None, plot_config: dict = None) -> plt.Figure:
+    """
+    Plot a spider chart for the given groups, values, and bounds.
+
+    :arg groups: List of group names
+    :arg values: List of values for each group
+    :arg lower_bounds: List of lower bounds for each group
+    :arg upper_bounds: List of upper bounds for each group
+    :arg model_name: Name of the model
+    :arg global_min: Global minimum value for the plot
+    :arg global_max: Global maximum value for the plot
+    :arg metric: Metric to display on the plot
+    :arg plot_config: Optional configuration dictionary for the plot
+
+    :returns: Matplotlib figure object
+    """
     # Sort groups so that within each attribute they appear in order
     if plot_config is None:
         plot_config = {}
@@ -20,8 +38,7 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
             attr_order = list(custom_orders.keys()).index(attr)
             order = custom_orders[attr]
             return (attr_order, order.index(group)) if group in order else (attr_order, len(order))
-        else:
-            return len(custom_orders), group
+        return len(custom_orders), group
 
     combined = list(zip(groups, values, lower_bounds, upper_bounds))
     combined.sort(key=lambda x: group_sort_key(x[0], custom_orders))
@@ -46,7 +63,7 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
     values, lower_bounds, upper_bounds = map(lambda x: list(x) + [x[0]], [values, lower_bounds, upper_bounds])
     angles += [angles[0]]
 
-    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw={"polar": True})
 
     # Plot the main line and markers
     ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2)
@@ -101,7 +118,14 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
         plt.tight_layout()
     return fig
 
-def figure_to_image(fig):
+def figure_to_image(fig) -> np.ndarray:
+    """
+    Convert a Matplotlib figure to a numpy array.
+
+    :arg fig: Matplotlib figure object
+
+    :returns: Numpy array representing the figure
+    """
     # Draw the renderer
     fig.canvas.draw()
     # Get width and height in pixels
@@ -116,6 +140,12 @@ def figure_to_image(fig):
 
 
 def display_figures_grid(figures, n_cols=3):
+    """
+    Display a grid of: figures in a single plot.
+
+    :arg figures: List of Matplotlib figure objects
+    :arg n_cols: Number of columns in the grid
+    """
     # Calculate the number of rows needed
     n_figs = len(figures)
     n_rows = (n_figs + n_cols - 1) // n_cols
