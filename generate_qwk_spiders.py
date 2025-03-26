@@ -141,20 +141,20 @@ def calculate_delta_kappa(
                 base_seed=group_seed,
             )
 
-            # Remove and store reference bootstraps.
-            ref_bootstraps = kappa_dicts.pop(reference_groups[category])
+        # Remove and store reference bootstraps.
+        ref_bootstraps = kappa_dicts.pop(reference_groups[category])
 
-            # Now calculate the differences.
-            for value, kappa_dict in kappa_dicts.items():
-                for model in ai_columns:
-                    model_boot = np.array(kappa_dict[model])
-                    ref_boot = np.array(ref_bootstraps[model])
-                    deltas = model_boot - ref_boot
-                    delta_median = float(np.median(deltas))
-                    lower_value, upper_value = np.percentile(deltas, [2.5, 97.5])
-                    delta_kappas[category][model][value] = (
-                        delta_median,
-                        (float(lower_value), float(upper_value))
+        # Now calculate the differences.
+        for value, kappa_dict in kappa_dicts.items():
+            for model in ai_columns:
+                model_boot = np.array(kappa_dict[model])
+                ref_boot = np.array(ref_bootstraps[model])
+                deltas = model_boot - ref_boot
+                delta_median = float(np.median(deltas))
+                lower_value, upper_value = np.percentile(deltas, [2.5, 97.5])
+                delta_kappas[category][model][value] = (
+                    delta_median,
+                    (float(lower_value), float(upper_value))
                     )
     return delta_kappas
 
@@ -219,22 +219,30 @@ def print_table_from_dict(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[floa
                           tablefmt: str = r"grid") -> None:
     """
     Print a table of delta kappas that have a 95% CI excluding zero.
+    Negative delta values are printed in maroon, positive in green.
 
     :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
     :arg tablefmt: Table format string for tabulate.
     """
     results = []
+    # ANSI escape codes for maroon and green using 24-bit RGB colors
+    maroon = "\033[38;2;128;0;0m"
+    green = "\033[38;2;0;128;0m"
+    reset = "\033[0m"
+
     for category, model_data in delta_kappas.items():
         for model, groups in model_data.items():
             for group, (delta, (lower_ci, upper_ci)) in groups.items():
                 if lower_ci > 0 or upper_ci < 0:
+                    # Color the delta value based on its sign
+                    color = maroon if delta < 0 else green
                     results.append([
                         model,
                         category,
                         group,
-                        round(delta, 4),
-                        round(lower_ci, 4),
-                        round(upper_ci, 4)
+                        f"{color}{delta:.4f}{reset}",
+                        f"{color}{lower_ci:.4f}{reset}",
+                        f"{color}{upper_ci:.4f}{reset}"
                     ])
     results.sort(key=lambda row: (row[0], row[1], row[2]))
     if results:
