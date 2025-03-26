@@ -35,24 +35,22 @@ def compute_bootstrap_eod_aaod(df, category, ref_group, value, truth_col, ai_col
     ref_df = sample_df[sample_df[category] == ref_group]
     group_df = sample_df[sample_df[category] == value]
 
+    # Precompute truth masks for both reference and group DataFrames
+    ref_truth_pos = (ref_df[truth_col] == 1)
+    ref_truth_neg = ~ref_truth_pos  # equivalent to ref_df[truth_col] == 0
+    group_truth_pos = (group_df[truth_col] == 1)
+    group_truth_neg = ~group_truth_pos  # equivalent to group_df[truth_col] == 0
+
     results = {}
     for model in ai_columns:
-        # Precompute boolean masks for efficiency.
-        ref_truth_pos = ref_df[truth_col] == 1
-        ref_truth_neg = ref_df[truth_col] == 0
-        group_truth_pos = group_df[truth_col] == 1
-        group_truth_neg = group_df[truth_col] == 0
+        ref_pred = (ref_df[model] == 1)
+        group_pred = (group_df[model] == 1)
 
-        ref_tpos = ref_df.loc[ref_truth_pos, model] == 1
-        ref_tneg = ref_df.loc[ref_truth_neg, model] == 1
-        group_tpos = group_df.loc[group_truth_pos, model] == 1
-        group_tneg = group_df.loc[group_truth_neg, model] == 1
-
-        # Avoid division by zero.
-        tpr_ref = ref_tpos.sum() / ref_truth_pos.sum() if ref_truth_pos.sum() else np.nan
-        fpr_ref = ref_tneg.sum() / ref_truth_neg.sum() if ref_truth_neg.sum() else np.nan
-        tpr_group = group_tpos.sum() / group_truth_pos.sum() if group_truth_pos.sum() else np.nan
-        fpr_group = group_tneg.sum() / group_truth_neg.sum() if group_truth_neg.sum() else np.nan
+        # Use the precomputed masks to calculate sums for numerator and denominator
+        tpr_ref = ref_pred[ref_truth_pos].sum() / ref_truth_pos.sum() if ref_truth_pos.sum() else np.nan
+        fpr_ref = ref_pred[ref_truth_neg].sum() / ref_truth_neg.sum() if ref_truth_neg.sum() else np.nan
+        tpr_group = group_pred[group_truth_pos].sum() / group_truth_pos.sum() if group_truth_pos.sum() else np.nan
+        fpr_group = group_pred[group_truth_neg].sum() / group_truth_neg.sum() if group_truth_neg.sum() else np.nan
 
         eod = tpr_group - tpr_ref
         aaod = 0.5 * (abs(fpr_group - fpr_ref) + abs(tpr_group - tpr_ref))
@@ -61,8 +59,9 @@ def compute_bootstrap_eod_aaod(df, category, ref_group, value, truth_col, ai_col
     return results
 
 
-def calculate_eod_aaod(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000):
+def calculate_eod_aaod(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000, base_seed=None):
     eod_aaod = {category: {model: {} for model in ai_columns} for category in categories}
+    rng = np.random.RandomState(base_seed)  # For reproducibility
 
     for category in tqdm(categories, desc='Categories', position=0):
         if category not in valid_groups:
@@ -79,7 +78,6 @@ def calculate_eod_aaod(df, categories, reference_groups, valid_groups, truth_col
             aaod_samples = {model: [] for model in ai_columns}
 
             # Preassign seeds for each bootstrap iteration.
-            rng = np.random.RandomState()
             seeds = rng.randint(0, 1_000_000, size=n_iter)
 
             # Run bootstrap iterations in parallel.
@@ -169,7 +167,7 @@ if __name__ == '__main__':
     bootstrap_config = config.get('bootstrap', {})
     rand_seed = bootstrap_config.get('seed', None)
     n_iter = bootstrap_config.get('iterations', 1000)
-    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups, truth_col, test_cols, n_iter=n_iter)
+    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups, truth_col, test_cols, n_iter=n_iter, base_seed=rand_seed)
 
     metrics = ['eod', 'aaod']
     plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)
