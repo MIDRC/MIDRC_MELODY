@@ -38,18 +38,33 @@ def calculate_kappas_and_intervals(df, truth_col, ai_cols, n_iter=1000, base_see
     return kappas, intervals
 
 # Custom bootstrap kappa
-def bootstrap_kappa(df, truth_col, model, n_iter=1000, n_jobs=-1, base_seed=None):
-    # Generate unique seeds for each iteration from the base seed
+def bootstrap_kappa(df, truth_col, models, n_iter=1000, n_jobs=-1, base_seed=None):
+    from sklearn.metrics import cohen_kappa_score
+    from sklearn.utils import resample
+    from joblib import Parallel, delayed
+    import numpy as np
+
+    # Convert models to a list if possible.
+    if not isinstance(models, list):
+        try:
+            models = models.tolist()
+        except AttributeError:
+            models = [models]
+
+    # Generate unique seeds for each iteration
     seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
 
-    def resample_and_compute_kappa(df, model, seed):
+    def resample_and_compute_kappa(df, truth_col, models, seed):
         sampled_df = resample(df, replace=True, random_state=seed)
-        return cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic')
+        return [cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic') for model in models]
 
-    # Use Parallel to run the bootstrap iterations in parallel
-    kappas = Parallel(n_jobs=n_jobs)(delayed(resample_and_compute_kappa)(df, model, seed) for seed in seeds)
+    # Compute bootstrap kappas for each model
+    kappas_2d = Parallel(n_jobs=1)(
+        delayed(resample_and_compute_kappa)(df, truth_col, models, seed) for seed in seeds
+    )
+    kappa_dict = dict(zip(models, zip(*kappas_2d)))
 
-    return kappas
+    return kappa_dict
 
 # Custom bootstrap kappa
 def bootstrap_kappa_by_columns(df, truth_col, model, columns, n_iter=1000, n_jobs=-1, base_seed=None):
@@ -73,45 +88,39 @@ def bootstrap_kappa_by_columns(df, truth_col, model, columns, n_iter=1000, n_job
         delayed(resample_and_compute_kappa)(df, truth_col, model, columns, seed)
         for seed in seeds
     )
+    return kappas
 
-# Step 7: Calculate delta kappa
+
 def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000, base_seed=None):
     delta_kappas = {}
+    rng = np.random.RandomState(base_seed)
 
     for category in tqdm(categories, desc='Categories', position=0):
-        # Skip if the category is not in the valid groups
         if category not in valid_groups:
             continue
 
         delta_kappas[category] = {model: {} for model in ai_columns}
         unique_values = df[category].unique()
+        # Pre-filter reference DataFrame once per category
+        ref_df = df[df[category] == reference_groups[category]]
 
-        ref_filtered_df = df[df[category] == reference_groups[category]]
+        # Precompute bootstrap kappa for each model on the reference group once per category.
+        ref_bootstraps = bootstrap_kappa(ref_df, truth_col, ai_columns, n_iter, base_seed=rng.randint(0, 1_000_000))
 
-        for model in tqdm(ai_columns, desc=f"Models", leave=False, position=1):
-            # for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
-            #     if value == reference_groups[category]:
-            #         continue
-            kappas_ref = bootstrap_kappa(ref_filtered_df, truth_col, model, n_iter, base_seed=base_seed)
+        for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=1):
+            # Skip values that do not qualify.
+            if value == reference_groups[category] or value not in valid_groups[category]:
+                continue
 
-            for value in tqdm(unique_values, desc=f"Category '{category}' Groups", leave=False, position=2):
-            # for model in tqdm(ai_columns, desc=f"Models for '{value} Group", leave=False, position=2):
-                # Skip if the value is the reference group
-                if value == reference_groups[category]:
-                    continue
-                # Skip if the value is not in the valid groups
-                if value not in valid_groups[category]:
-                    continue
-
-                filtered_df = df[df[category] == value]
-
-                kappas = bootstrap_kappa(filtered_df, truth_col, model, n_iter, base_seed=base_seed)
-
-                deltas = [a - b for a, b in zip(kappas, kappas_ref)]
-                delta_median = np.percentile(deltas, 50)
+            filtered_df = df[df[category] == value]
+            # Generate a seed for this group.
+            group_seed = rng.randint(0, 1_000_000)
+            kappa_dict = bootstrap_kappa(filtered_df, truth_col, ai_columns, n_iter, base_seed=group_seed)
+            for model, model_kappas in kappa_dict.items():
+                deltas = np.array(model_kappas) - np.array(ref_bootstraps[model])
+                delta_median = np.median(deltas)
                 lower_value, upper_value = np.percentile(deltas, [2.5, 97.5])
                 delta_kappas[category][model][value] = (delta_median, (lower_value, upper_value))
-
     return delta_kappas
 
 def extract_plot_data(delta_kappas, model_name):
