@@ -38,13 +38,8 @@ def calculate_kappas_and_intervals(df, truth_col, ai_cols, n_iter=1000, base_see
         
     return kappas, intervals
 
-# Custom bootstrap kappa
-def bootstrap_kappa(df, truth_col, models, n_iter=1000, n_jobs=-1, base_seed=None):
-    from sklearn.metrics import cohen_kappa_score
-    from sklearn.utils import resample
-    from joblib import Parallel, delayed
-    import numpy as np
 
+def bootstrap_kappa(df, truth_col, models, n_iter=1000, n_jobs=-1, base_seed=None):
     # Convert models to a list if possible.
     if not isinstance(models, list):
         try:
@@ -57,14 +52,15 @@ def bootstrap_kappa(df, truth_col, models, n_iter=1000, n_jobs=-1, base_seed=Non
 
     def resample_and_compute_kappa(df, truth_col, models, seed):
         sampled_df = resample(df, replace=True, random_state=seed)
+        # Compute kappa scores for each model.
         return [cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic') for model in models]
 
-    # Compute bootstrap kappas for each model
-    # Wrap the Parallel call with tqdm_joblib to display progress
+    # Wrap the Parallel call with tqdm_joblib for a progress bar.
     with tqdm_joblib(total=n_iter, desc=f"Bootstrapping", leave=False):
         kappas_2d = Parallel(n_jobs=n_jobs)(
             delayed(resample_and_compute_kappa)(df, truth_col, models, seed) for seed in seeds
         )
+    # Transpose the 2D list to be a dict mapping each model to its list of bootstrap kappas.
     kappa_dict = dict(zip(models, zip(*kappas_2d)))
 
     return kappa_dict
