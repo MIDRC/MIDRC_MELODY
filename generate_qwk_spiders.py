@@ -6,6 +6,7 @@ from sklearn.metrics import cohen_kappa_score
 from sklearn.utils import resample
 from tabulate import tabulate
 from tqdm import tqdm
+from tqdm_joblib import tqdm_joblib
 import yaml
 
 from data_loading import create_matched_df_from_files, determine_valid_n_reference_groups, save_pickled_data
@@ -59,36 +60,14 @@ def bootstrap_kappa(df, truth_col, models, n_iter=1000, n_jobs=-1, base_seed=Non
         return [cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic') for model in models]
 
     # Compute bootstrap kappas for each model
-    kappas_2d = Parallel(n_jobs=1)(
-        delayed(resample_and_compute_kappa)(df, truth_col, models, seed) for seed in seeds
-    )
+    # Wrap the Parallel call with tqdm_joblib to display progress
+    with tqdm_joblib(total=n_iter, desc=f"Bootstrapping", leave=False):
+        kappas_2d = Parallel(n_jobs=n_jobs)(
+            delayed(resample_and_compute_kappa)(df, truth_col, models, seed) for seed in seeds
+        )
     kappa_dict = dict(zip(models, zip(*kappas_2d)))
 
     return kappa_dict
-
-# Custom bootstrap kappa
-def bootstrap_kappa_by_columns(df, truth_col, model, columns, n_iter=1000, n_jobs=-1, base_seed=None):
-    # Ensure columns is a list; if not, wrap it in a list.
-    if not isinstance(columns, list):
-        columns = [columns]
-
-    # Generate unique seeds for each iteration from the base seed
-    seeds = np.random.RandomState(base_seed).randint(0, 1_000_000, size=n_iter)
-
-    def resample_and_compute_kappa(df, truth_col, model, columns, seed):
-        sampled_groups = []
-        for group, group_df in df.groupby(columns):
-            n_samples = len(group_df)
-            sampled_group = resample(group_df, replace=True, n_samples=n_samples, random_state=seed)
-            sampled_groups.append(sampled_group)
-        sampled_df = pd.concat(sampled_groups)
-        return cohen_kappa_score(sampled_df[truth_col], sampled_df[model], weights='quadratic')
-
-    kappas = Parallel(n_jobs=n_jobs)(
-        delayed(resample_and_compute_kappa)(df, truth_col, model, columns, seed)
-        for seed in seeds
-    )
-    return kappas
 
 
 def calculate_delta_kappa(df, categories, reference_groups, valid_groups, truth_col, ai_columns, n_iter=1000, base_seed=None):
