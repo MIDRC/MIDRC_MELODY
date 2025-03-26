@@ -1,5 +1,7 @@
 """This script generates QWK spider plots for multiple models across different categories."""
 
+from typing import List, Dict, Tuple, Any, Optional, Union
+
 from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +15,6 @@ import yaml
 
 from data_loading import create_matched_df_from_files, determine_valid_n_reference_groups, save_pickled_data, check_required_columns
 from plot_tools import plot_spider_chart, display_figures_grid
-from typing import List, Dict, Tuple, Any, Optional, Union
 
 
 def calculate_kappas_and_intervals(
@@ -244,7 +245,12 @@ def print_table_from_dict(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[floa
     if results:
         print("Delta Kappa values with 95% CI excluding zero:")
         headers = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
-        print(tabulate(results, headers=headers, tablefmt=tablefmt))
+        table_str = tabulate(results, headers=headers, tablefmt=tablefmt)
+        if tablefmt == 'html':
+            table_str = table_str.replace(maroon, "<span style='color: rgb(128, 0, 0)'>")
+            table_str = table_str.replace(green, "<span style='color: rgb(0, 128, 0)'>")
+            table_str = table_str.replace(reset, "</span>")
+        print(table_str)
     else:
         print("No model/group combinations with a CI excluding zero.")
 

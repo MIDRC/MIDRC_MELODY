@@ -1,5 +1,7 @@
 """This script generates EOD and AAOD spider plots for multiple models across different categories."""
 
+from typing import List, Dict, Any, Tuple, Optional, Union
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -11,7 +13,6 @@ import yaml
 
 from data_loading import determine_valid_n_reference_groups, create_matched_df_from_files, save_pickled_data, check_required_columns
 from plot_tools import plot_spider_chart, display_figures_grid
-from typing import List, Dict, Any, Tuple, Optional, Union
 
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4) -> pd.DataFrame:
     """
