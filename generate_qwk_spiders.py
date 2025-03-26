@@ -11,7 +11,7 @@ from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 import yaml
 
-from data_loading import create_matched_df_from_files, determine_valid_n_reference_groups, save_pickled_data
+from data_loading import create_matched_df_from_files, determine_valid_n_reference_groups, save_pickled_data, check_required_columns
 from plot_tools import plot_spider_chart, display_figures_grid
 from typing import List, Dict, Tuple, Any, Optional, Union
 
@@ -36,21 +36,17 @@ def calculate_kappas_and_intervals(
     intervals: Dict[str, Tuple[float, float]] = {}
     y_true = df[truth_col].to_numpy(dtype=int)
 
-    # Using a modern random generator for reproducibility.
     rng = np.random.default_rng(base_seed)
     for col in ai_cols:
         y_pred = df[col].to_numpy(dtype=int)
         kappa = cohen_kappa_score(y_true, y_pred, weights='quadratic')
         kappas[col] = kappa
 
-        kappa_scores = []
-        for _ in range(n_iter):
+        kappa_scores = np.empty(n_iter)
+        for i in range(n_iter):
             indices = rng.integers(0, len(y_true), size=len(y_true))
-            kappa_bs = cohen_kappa_score(y_true[indices], y_pred[indices], weights='quadratic')
-            kappa_scores.append(kappa_bs)
-        kappa_scores.sort()
-        lower_bnd = kappa_scores[int(0.025 * n_iter)]
-        upper_bnd = kappa_scores[int(0.975 * n_iter)]
+            kappa_scores[i] = cohen_kappa_score(y_true[indices], y_pred[indices], weights='quadratic')
+        lower_bnd, upper_bnd = np.percentile(kappa_scores, [2.5, 97.5])
         intervals[col] = (lower_bnd, upper_bnd)
         print(f"Model: {col} | Kappa: {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true)}")
 
@@ -89,7 +85,7 @@ def bootstrap_kappa(
             for model in models
         ]
 
-    with tqdm_joblib(total=n_iter, desc=r"Bootstrapping", leave=False):
+    with tqdm_joblib(total=n_iter, desc="Bootstrapping", leave=False):
         kappas_2d = Parallel(n_jobs=n_jobs)(
             delayed(resample_and_compute_kappa)(df, truth_col, models, seed)
             for seed in seeds
@@ -118,7 +114,7 @@ def calculate_delta_kappa(
     delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]] = {}
     rng = np.random.default_rng(base_seed)
 
-    for category in tqdm(categories, desc=r"Categories", position=0):
+    for category in tqdm(categories, desc="Categories", position=0):
         if category not in valid_groups:
             continue
 
@@ -209,14 +205,14 @@ def generate_plots_from_delta_kappas(
     for model in ai_models:
         groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
         fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max,
-                                metric=r"QWK", plot_config=plot_config)
+                                metric="QWK", plot_config=plot_config)
         figures.append(fig)
 
     display_figures_grid(figures)
     plt.show()
 
 def print_table_from_dict(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
-                          tablefmt: str = r"grid") -> None:
+                          tablefmt: str = "grid") -> None:
     """
     Print a table of delta kappas that have a 95% CI excluding zero.
     Negative delta values are printed in maroon, positive in green.
@@ -246,27 +242,31 @@ def print_table_from_dict(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[floa
                     ])
     results.sort(key=lambda row: (row[0], row[1], row[2]))
     if results:
-        print(r"Delta Kappa values with 95% CI excluding zero:")
-        headers = [r"Model", r"Category", r"Group", r"Delta Kappa", r"Lower CI", r"Upper CI"]
+        print("Delta Kappa values with 95% CI excluding zero:")
+        headers = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
         print(tabulate(results, headers=headers, tablefmt=tablefmt))
     else:
-        print(r"No model/group combinations with a CI excluding zero.")
+        print("No model/group combinations with a CI excluding zero.")
 
 if __name__ == '__main__':
-    with open(r'config.yaml', r'r', encoding=r'utf-8') as stream:
+    with open('config.yaml', 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
-    matched_df, categories, test_cols = create_matched_df_from_files(config[r'input data'], config[r'numeric_cols'])
+    matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
     reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
-    bootstrap_config = config.get(r'bootstrap', {})
-    base_seed = bootstrap_config.get(r'seed', None)
-    n_iter = bootstrap_config.get(r'iterations', 1000)
-    truth_col = config[r'input data'].get(r'truth column', r'truth')
+    bootstrap_config = config.get('bootstrap', {})
+    base_seed = bootstrap_config.get('seed', None)
+    n_iter = bootstrap_config.get('iterations', 1000)
+    truth_col = config['input data'].get('truth column', 'truth')
+
+    # Check required columns before further processing
+    required_columns = [truth_col] + test_cols + categories
+    check_required_columns(matched_df, required_columns)
 
     kappas, intervals = calculate_kappas_and_intervals(matched_df, truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
-    print(r"Bootstrapping delta Kappas, this may take a while", flush=True)
+    print("Bootstrapping delta Kappas, this may take a while", flush=True)
     delta_kappas = calculate_delta_kappa(matched_df, categories, reference_groups, valid_groups,
                                          truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
-    print_table_from_dict(delta_kappas, tablefmt=r"rounded_outline")
-    generate_plots_from_delta_kappas(delta_kappas, test_cols, plot_config=config[r'plot'])
-    save_pickled_data(config[r'output'], r"QWK", delta_kappas)
+    print_table_from_dict(delta_kappas, tablefmt="rounded_outline")
+    generate_plots_from_delta_kappas(delta_kappas, test_cols, plot_config=config['plot'])
+    save_pickled_data(config['output'], "QWK", delta_kappas)

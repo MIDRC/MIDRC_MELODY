@@ -2,6 +2,7 @@
 
 import pickle
 import time
+from typing import List
 
 import pandas as pd
 
@@ -102,3 +103,14 @@ def save_pickled_data(output_config: dict, metric: str, data: any):
         print(f'Saving {metric} data to filename:', filename)
         with open(filename, 'wb') as f:
             pickle.dump(data, f)
+
+def check_required_columns(df: pd.DataFrame, columns: List[str]) -> None:
+    """
+    Raise an error if any required column is missing.
+
+    :arg df: DataFrame to check for required columns.
+    :arg columns: List of required columns.
+    """
+    missing = [col for col in columns if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")

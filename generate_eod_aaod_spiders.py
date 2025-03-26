@@ -9,21 +9,9 @@ from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 import yaml
 
-from data_loading import determine_valid_n_reference_groups, create_matched_df_from_files, save_pickled_data
+from data_loading import determine_valid_n_reference_groups, create_matched_df_from_files, save_pickled_data, check_required_columns
 from plot_tools import plot_spider_chart, display_figures_grid
 from typing import List, Dict, Any, Tuple, Optional, Union
-
-
-def check_required_columns(df: pd.DataFrame, columns: List[str]) -> None:
-    """
-    Raise an error if any required column is missing.
-
-    :arg df: DataFrame to check for required columns.
-    :arg columns: List of required columns.
-    """
-    missing = [col for col in columns if col not in df.columns]
-    if missing:
-        raise ValueError(f"Missing required columns: {missing}")
 
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4) -> pd.DataFrame:
     """
