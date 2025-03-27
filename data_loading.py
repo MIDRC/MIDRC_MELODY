@@ -1,8 +1,9 @@
 """ Data Loading and Preprocessing Functions """
 
+from dataclasses import dataclass
 import pickle
 import time
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any, Optional
 
 import pandas as pd
 
@@ -114,3 +115,39 @@ def check_required_columns(df: pd.DataFrame, columns: List[str]) -> None:
     missing = [col for col in columns if col not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
+
+@dataclass(frozen=True)
+class TestAndDemographicData:
+    """
+    Class to store file data
+    """
+    matched_df: pd.DataFrame
+    truth_col: str
+    categories: List[str]
+    test_cols: List[str]
+    reference_groups: Dict[str, Any]
+    valid_groups: Dict[str, List[Any]]
+    n_iter: Optional[int]
+    base_seed: Optional[int]
+
+
+def build_test_and_demographic_data(config: Dict[str, Any]) -> TestAndDemographicData:
+    """
+    Build the TestAndDemographicData object from the configuration dictionary.
+
+    :arg config: Configuration dictionary
+
+    :returns: TestAndDemographicData object
+    """
+    matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
+    reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
+    n_iter = config.get('bootstrap', {}).get('iterations', 1000)
+    base_seed = config.get('bootstrap', {}).get('seed', None)
+    truth_col = config['input data'].get('truth column', 'truth')
+
+    # Check required columns before further processing
+    required_columns = [truth_col] + test_cols + categories
+    check_required_columns(matched_df, required_columns)
+
+    return TestAndDemographicData(matched_df, truth_col, categories, test_cols, reference_groups, valid_groups, n_iter,
+                                  base_seed)

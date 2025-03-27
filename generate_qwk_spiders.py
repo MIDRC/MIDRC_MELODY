@@ -1,5 +1,5 @@
 """This script generates QWK spider plots for multiple models across different categories."""
-
+from dataclasses import replace
 from typing import List, Dict, Tuple, Any, Optional, Union
 
 from joblib import Parallel, delayed
@@ -13,38 +13,35 @@ from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 import yaml
 
-from data_loading import create_matched_df_from_files, determine_valid_n_reference_groups, save_pickled_data, check_required_columns
+from data_loading import build_test_and_demographic_data, save_pickled_data, TestAndDemographicData
 from plot_tools import plot_spider_chart, display_figures_grid
 
 
 def calculate_kappas_and_intervals(
-    df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], n_iter: int = 1000, base_seed: Optional[int] = None
+    test_data: TestAndDemographicData
 ) -> Tuple[Dict[str, float], Dict[str, Tuple[float, float]]]:
     """
     Calculate Cohen's quadratic weighted kappa and bootstrap confidence intervals.
 
-    :arg df: DataFrame containing the truth and AI columns.
-    :arg truth_col: Column name of the truth labels.
-    :arg ai_cols: List of AI column names.
-    :arg n_iter: Number of bootstrap iterations.
-    :arg base_seed: Base seed for reproducibility.
+    :arg test_data: TestAndDemographicData object containing the test and demographic data.
 
     :returns: Tuple of dictionaries containing kappa scores and 95% confidence intervals.
     """
+    ai_cols = test_data.test_cols
     if not isinstance(ai_cols, list):
         ai_cols = [ai_cols]
     kappas: Dict[str, float] = {}
     intervals: Dict[str, Tuple[float, float]] = {}
-    y_true = df[truth_col].to_numpy(dtype=int)
+    y_true = test_data.matched_df[test_data.truth_col].to_numpy(dtype=int)
 
-    rng = np.random.default_rng(base_seed)
+    rng = np.random.default_rng(test_data.base_seed)
     for col in ai_cols:
-        y_pred = df[col].to_numpy(dtype=int)
+        y_pred = test_data.matched_df[col].to_numpy(dtype=int)
         kappa = cohen_kappa_score(y_true, y_pred, weights='quadratic')
         kappas[col] = kappa
 
-        kappa_scores = np.empty(n_iter)
-        for i in range(n_iter):
+        kappa_scores = np.empty(test_data.n_iter)
+        for i in range(test_data.n_iter):
             indices = rng.integers(0, len(y_true), size=len(y_true))
             kappa_scores[i] = cohen_kappa_score(y_true[indices], y_pred[indices], weights='quadratic')
         lower_bnd, upper_bnd = np.percentile(kappa_scores, [2.5, 97.5])
@@ -54,28 +51,23 @@ def calculate_kappas_and_intervals(
     return kappas, intervals
 
 def bootstrap_kappa(
-    df: pd.DataFrame, truth_col: str, models: Union[List[str], Any], n_iter: int = 1000,
-    n_jobs: int = -1, base_seed: Optional[int] = None
+    # df: pd.DataFrame, truth_col: str, models: Union[List[str], Any], n_iter: int = 1000,
+    # n_jobs: int = -1, base_seed: Optional[int] = None
+    test_data: TestAndDemographicData, n_jobs: int = -1
 ) -> Dict[str, Tuple]:
     """
     Perform bootstrap estimation of quadratic weighted kappa scores for each model in parallel.
 
-    :arg df: DataFrame containing the truth and AI columns.
-    :arg truth_col: Column name of the truth labels.
-    :arg models: List of test column names.
-    :arg n_iter: Number of bootstrap iterations.
+    :arg test_data: TestAndDemographicData object containing the test and demographic data.
     :arg n_jobs: Number of parallel jobs.
-    :arg base_seed: Base seed for reproducibility.
 
     :returns: Dictionary of model names and their corresponding kappa scores.
     """
+    models = test_data.test_cols
     if not isinstance(models, list):
-        try:
-            models = models.tolist()
-        except AttributeError:
-            models = [models]
-    rng = np.random.default_rng(base_seed)
-    seeds = rng.integers(0, 1_000_000, size=n_iter)
+        models = [models]
+    rng = np.random.default_rng(test_data.base_seed)
+    seeds = rng.integers(0, 1_000_000, size=test_data.n_iter)
 
     def resample_and_compute_kappa(df: pd.DataFrame, truth_col: str, models: List[str], seed: int) -> List[float]:
         sampled_df = resample(df, replace=True, random_state=seed)
@@ -86,64 +78,56 @@ def bootstrap_kappa(
             for model in models
         ]
 
-    with tqdm_joblib(total=n_iter, desc="Bootstrapping", leave=False):
+    with tqdm_joblib(total=test_data.n_iter, desc="Bootstrapping", leave=False):
         kappas_2d = Parallel(n_jobs=n_jobs)(
-            delayed(resample_and_compute_kappa)(df, truth_col, models, seed)
+            delayed(resample_and_compute_kappa)(test_data.matched_df, test_data.truth_col, models, seed)
             for seed in seeds
         )
     kappa_dict = dict(zip(models, zip(*kappas_2d)))
     return kappa_dict
 
 def calculate_delta_kappa(
-    df: pd.DataFrame, categories: List[str], reference_groups: Dict[str, Any], valid_groups: Dict[str, List[Any]],
-    truth_col: str, ai_columns: List[str], n_iter: int = 1000, base_seed: Optional[int] = None
+    # df: pd.DataFrame, categories: List[str], reference_groups: Dict[str, Any], valid_groups: Dict[str, List[Any]],
+    # truth_col: str, ai_columns: List[str], n_iter: int = 1000, base_seed: Optional[int] = None
+    test_data: TestAndDemographicData
 ) -> Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]]:
     """
     Calculate delta kappa (difference between group and reference) with bootstrap confidence intervals.
 
-    :arg df: DataFrame containing the truth and AI columns.
-    :arg categories: List of category column names.
-    :arg reference_groups: Dictionary of reference groups for each category.
-    :arg valid_groups: Dictionary of valid groups for each category.
-    :arg truth_col: Column name of the truth labels.
-    :arg ai_columns: List of test column names.
-    :arg n_iter: Number of bootstrap iterations.
-    :arg base_seed: Base seed for reproducibility.
+    :arg test_data: TestAndDemographicData object containing the test and demographic data.
 
     :returns: Dictionary of delta quadratic weighted kappa values with 95% confidence intervals.
     """
     delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]] = {}
-    rng = np.random.default_rng(base_seed)
+    rng = np.random.default_rng(test_data.base_seed)
+    df = test_data.matched_df
 
-    for category in tqdm(categories, desc="Categories", position=0):
-        if category not in valid_groups:
+    for category in tqdm(test_data.categories, desc="Categories", position=0):
+        if category not in test_data.valid_groups:
             continue
 
-        delta_kappas[category] = {model: {} for model in ai_columns}
+        delta_kappas[category] = {model: {} for model in test_data.test_cols}
         unique_values = df[category].unique().tolist()
 
         kappa_dicts = {}
         for value in tqdm(unique_values, desc=f"Category \033[1m{category}\033[0m Groups", leave=False, position=1):
-            if value not in valid_groups[category]:
+            if value not in test_data.valid_groups[category]:
                 continue
 
             filtered_df = df[df[category] == value]
             group_seed = int(rng.integers(0, 1_000_000))
 
-            kappa_dicts[value] = bootstrap_kappa(
-                filtered_df,
-                truth_col,
-                ai_columns,
-                n_iter,
-                base_seed=group_seed,
-            )
+            # Create a shallow copy of test_data and update matched_df with filtered_df
+            filtered_test_data = replace(test_data, matched_df=filtered_df)
+
+            kappa_dicts[value] = bootstrap_kappa(filtered_test_data, n_jobs=-1)
 
         # Remove and store reference bootstraps.
-        ref_bootstraps = kappa_dicts.pop(reference_groups[category])
+        ref_bootstraps = kappa_dicts.pop(test_data.reference_groups[category])
 
         # Now calculate the differences.
         for value, kappa_dict in kappa_dicts.items():
-            for model in ai_columns:
+            for model in test_data.test_cols:
                 model_boot = np.array(kappa_dict[model])
                 ref_boot = np.array(ref_bootstraps[model])
                 deltas = model_boot - ref_boot
@@ -258,21 +242,11 @@ if __name__ == '__main__':
     with open('config.yaml', 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
-    matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
-    reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
-    bootstrap_config = config.get('bootstrap', {})
-    base_seed = bootstrap_config.get('seed', None)
-    n_iter = bootstrap_config.get('iterations', 1000)
-    truth_col = config['input data'].get('truth column', 'truth')
+    test_data = build_test_and_demographic_data(config)
 
-    # Check required columns before further processing
-    required_columns = [truth_col] + test_cols + categories
-    check_required_columns(matched_df, required_columns)
-
-    kappas, intervals = calculate_kappas_and_intervals(matched_df, truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
+    kappas, intervals = calculate_kappas_and_intervals(test_data)
     print("Bootstrapping delta Kappas, this may take a while", flush=True)
-    delta_kappas = calculate_delta_kappa(matched_df, categories, reference_groups, valid_groups,
-                                         truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
+    delta_kappas = calculate_delta_kappa(test_data)
     print_table_from_dict(delta_kappas, tablefmt="rounded_outline")
-    generate_plots_from_delta_kappas(delta_kappas, test_cols, plot_config=config['plot'])
+    generate_plots_from_delta_kappas(delta_kappas, test_data.test_cols, plot_config=config['plot'])
     save_pickled_data(config['output'], "QWK", delta_kappas)
