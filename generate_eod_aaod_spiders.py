@@ -1,5 +1,5 @@
 """This script generates EOD and AAOD spider plots for multiple models across different categories."""
-
+from dataclasses import replace
 from typing import List, Dict, Any, Tuple, Optional, Union
 
 import matplotlib.pyplot as plt
@@ -11,7 +11,7 @@ from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 import yaml
 
-from data_loading import determine_valid_n_reference_groups, create_matched_df_from_files, save_pickled_data, check_required_columns
+from data_loading import build_test_and_demographic_data, TestAndDemographicData, save_pickled_data, check_required_columns
 from plot_tools import plot_spider_chart, display_figures_grid
 
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4) -> pd.DataFrame:
@@ -99,55 +99,42 @@ def compute_bootstrap_eod_aaod(
     return results
 
 def calculate_eod_aaod(
-    df: pd.DataFrame,
-    categories: List[str],
-    reference_groups: Dict[str, Any],
-    valid_groups: Dict[str, List[Any]],
-    truth_col: str,
-    ai_columns: List[str],
-    n_iter: int = 1000,
-    base_seed: Optional[int] = None
+    test_data: TestAndDemographicData
 ) -> Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]]:
     """
     Calculate EOD and AAOD metrics with bootstrap iterations for multiple categories.
 
-    :arg df: DataFrame containing truth and test columns.
-    :arg categories: List of columns to group by.
-    :arg reference_groups: Dictionary of reference groups for each category.
-    :arg valid_groups: Dictionary of valid groups for each category.
-    :arg truth_col: Name of the truth column.
-    :arg ai_columns: List of test columns.
-    :arg n_iter: Number of bootstrap iterations.
-    :arg base_seed: Base seed for reproducibility.
+    :arg test_data: Test and demographic data.
 
     :returns: Dictionary of EOD and AAOD values for each model.
     """
+    ai_columns = test_data.test_cols
     eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]] = {
-        category: {model: {} for model in ai_columns} for category in categories
+        category: {model: {} for model in ai_columns} for category in test_data.categories
     }
-    rng = np.random.default_rng(base_seed)
+    rng = np.random.default_rng(test_data.base_seed)
 
-    for category in tqdm(categories, desc='Categories', position=0):
-        if category not in valid_groups:
+    for category in tqdm(test_data.categories, desc='Categories', position=0):
+        if category not in test_data.valid_groups:
             continue
 
-        ref_group = reference_groups[category]
-        unique_values = df[category].unique()
+        ref_group = test_data.reference_groups[category]
+        unique_values = test_data.matched_df[category].unique()
 
         for group_value in tqdm(unique_values, desc=f"Category \'{category}\' Groups", leave=False, position=1):
-            if group_value == ref_group or group_value not in valid_groups[category]:
+            if group_value == ref_group or group_value not in test_data.valid_groups[category]:
                 continue
 
             eod_samples = {model: [] for model in ai_columns}
             aaod_samples = {model: [] for model in ai_columns}
 
             # Preassign seeds for each bootstrap iteration.
-            seeds = rng.integers(0, 1_000_000, size=n_iter)
+            seeds = rng.integers(0, 1_000_000, size=test_data.n_iter)
 
-            with tqdm_joblib(total=n_iter, desc=f"Bootstrapping \'{group_value}\' Group", leave=False):
+            with tqdm_joblib(total=test_data.n_iter, desc=f"Bootstrapping \'{group_value}\' Group", leave=False):
                 bootstrap_results = Parallel(n_jobs=-1)(
                     delayed(compute_bootstrap_eod_aaod)(
-                        df, category, ref_group, group_value, truth_col, ai_columns, seed
+                        test_data.matched_df, category, ref_group, group_value, test_data.truth_col, ai_columns, seed
                     ) for seed in seeds
                 )
 
@@ -188,9 +175,9 @@ def extract_plot_data_eod_aaod(
 
     for category, model_data in eod_aaod.items():
         if model in model_data:
-            for group, metrics in model_data[model].items():
+            for group, metric_list in model_data[model].items():
                 groups.append(f"{category}: {group}")
-                value, (lower, upper) = metrics[metric]
+                value, (lower, upper) = metric_list[metric]
                 values.append(value)
                 lower_bounds.append(lower)
                 upper_bounds.append(upper)
@@ -262,27 +249,16 @@ if __name__ == '__main__':
     with open('config.yaml', 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
-    matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
-    reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
-    truth_col = config['input data'].get('truth column', 'truth')
-
-    # Check required columns before further processing
-    required_columns = [truth_col] + test_cols + categories
-    check_required_columns(matched_df, required_columns)
+    t_data = build_test_and_demographic_data(config)
 
     # Binarize scores
-    matched_df = binarize_scores(matched_df, truth_col, test_cols, threshold=4)
-
-    # EOD & AAOD calculation
-    bootstrap_config = config.get('bootstrap', {})
-    base_seed = bootstrap_config.get('seed', None)
-    n_iter = bootstrap_config.get('iterations', 1000)
-    eod_aaod = calculate_eod_aaod(matched_df, categories, reference_groups, valid_groups,
-                                  truth_col, test_cols, n_iter=n_iter, base_seed=base_seed)
+    matched_df = binarize_scores(t_data.matched_df, t_data.truth_col, t_data.test_cols, threshold=4)
+    test_data = replace(t_data, matched_df=matched_df)
+    eod_aaod = calculate_eod_aaod(test_data)
 
     metrics = ['eod', 'aaod']
-    plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)
-    figures_dict = plot_data_eod_aaod(plot_data_dict, test_cols, metrics=metrics, plot_config=config['plot'],
+    plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_data.test_cols, metrics=metrics)
+    figures_dict = plot_data_eod_aaod(plot_data_dict, test_data.test_cols, metrics=metrics, plot_config=config['plot'],
                                       global_min=global_min, global_max=global_max)
 
     plt.show()
