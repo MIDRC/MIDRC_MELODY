@@ -215,28 +215,21 @@ def plot_data_eod_aaod(
     plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]],
     test_cols: List[str],
     metrics: List[str] = ('eod', 'aaod'),
-    plot_config: Optional[Dict[str, Any]] = None,
-    global_min: float = 0.0,
-    global_max: float = 1.0
+    base_plot_data: Optional[SpiderPlotData] = None,
 ) -> Dict[str, List[Any]]:
     """
     Plot EOD and AAOD spider charts for each model.
 
-    :arg plot_data_dict: Dictionary of plot data for each metric and model.
+    :arg plot_data_dict: Dictionary of plot data for each metric.
     :arg test_cols: List of test columns.
     :arg metrics: List of metrics to plot.
-    :arg plot_config: Optional configuration for plotting.
-    :arg global_min: Global minimum value for the y-axis.
-    :arg global_max: Global maximum value for the y-axis.
+    :arg base_plot_data: Base SpiderPlotData instance for plot configuration.
 
     :returns: Dictionary of generated figures for each metric.
     """
     figures_dict: Dict[str, List[Any]] = {metric: [] for metric in metrics}
-    base_plot_data = SpiderPlotData(
-        ylim_min=global_min,
-        ylim_max=global_max,
-        plot_config=plot_config
-    )
+    if base_plot_data is None:
+        base_plot_data = SpiderPlotData()
     for metric in metrics:
         for model in test_cols:
             # Create a new copy based on the base instance
@@ -244,7 +237,7 @@ def plot_data_eod_aaod(
             plot_data.metric = metric
             plot_data.model_name = model
             plot_data.groups, plot_data.values, plot_data.lower_bounds, plot_data.upper_bounds = \
-                extract_plot_data_eod_aaod(eod_aaod, model, metric)
+                plot_data_dict[metric][model]
             fig = plot_spider_chart(plot_data)
             figures_dict[metric].append(fig)
 
@@ -267,8 +260,8 @@ if __name__ == '__main__':
 
     metrics = ['eod', 'aaod']
     plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_data.test_cols, metrics=metrics)
-    figures_dict = plot_data_eod_aaod(plot_data_dict, test_data.test_cols, metrics=metrics, plot_config=config['plot'],
-                                      global_min=global_min, global_max=global_max)
+    base_plot_data = SpiderPlotData(ylim_min=global_min, ylim_max=global_max, plot_config=config['plot'])
+    figures_dict = plot_data_eod_aaod(plot_data_dict, test_data.test_cols, metrics=metrics, base_plot_data=base_plot_data)
 
     plt.show()
 
