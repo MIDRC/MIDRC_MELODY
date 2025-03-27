@@ -7,6 +7,7 @@ import numpy as np
 
 @dataclass
 class SpiderPlotData:
+    """ Data class for spider plot data. """
     model_name: str = ""
     groups: List[str] = field(default_factory=list)
     values: List[float] = field(default_factory=list)
@@ -27,9 +28,9 @@ def get_angle_rot(start_loc: str) -> float:
     """
     if start_loc.startswith('t'):
         return np.pi / 2
-    elif start_loc.startswith('l'):
+    if start_loc.startswith('l'):
         return np.pi
-    elif start_loc.startswith('b'):
+    if start_loc.startswith('b'):
         return 3 * np.pi / 2
     return 0
 
