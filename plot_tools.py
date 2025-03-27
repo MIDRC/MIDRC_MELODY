@@ -126,7 +126,7 @@ def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
     ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2)
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(groups, fontsize=8, ha='center')
-    title = '' if metric is None else f'{metric} ' + f'Spider Plot for {plot_data.model_name}'
+    title = ('' if metric is None else f'{metric} ') + f'Spider Plot for {plot_data.model_name}'
     ax.set_title(title, size=14, weight='bold')
 
     if metric == 'QWK':  # This is a QWK plot
