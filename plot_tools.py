@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 @dataclass
 class SpiderPlotData:
     """ Data class for spider plot data. """
@@ -17,6 +18,7 @@ class SpiderPlotData:
     ylim_max: float = 1.0
     metric: str = ""
     plot_config: Dict[str, Any] = field(default_factory=dict)
+
 
 def get_angle_rot(start_loc: str) -> float:
     """
@@ -34,6 +36,7 @@ def get_angle_rot(start_loc: str) -> float:
         return 3 * np.pi / 2
     return 0
 
+
 def get_angles(num_axes: int, plot_config: dict) -> list:
     """
     Get the angles for the spider chart axes.
@@ -49,6 +52,7 @@ def get_angles(num_axes: int, plot_config: dict) -> list:
     angle_rot = get_angle_rot(plot_config.get('start', 'right'))  # matplotlib default is right)
     angles = [(angle + angle_rot) % (2 * np.pi) for angle in angles]
     return angles
+
 
 def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
     """
@@ -77,6 +81,7 @@ def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
             'ethnicity': ['Hispanic or Latino', 'Not Hispanic or Latino'],
             'intersectional_race_ethnicity': ['White', 'Not White or Hispanic or Latino'],
         }
+
     def group_sort_key(label, custom_orders):
         attr, group = label.split(': ', 1)
         if attr in custom_orders:
@@ -118,7 +123,6 @@ def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
     else:
         metric = None
 
-
     ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2)
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(groups, fontsize=8, ha='center')
@@ -152,6 +156,7 @@ def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
 
         plt.tight_layout()
     return fig
+
 
 def figure_to_image(fig) -> np.ndarray:
     """

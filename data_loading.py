@@ -25,7 +25,7 @@ def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict) -> T
     truth_col = input_data.get('truth column', 'truth')
 
     test_columns = df_test[df_test.columns.difference([uid_col])].columns
-    categories =  df_truth[df_truth.columns.difference([uid_col, truth_col])].columns
+    categories = df_truth[df_truth.columns.difference([uid_col, truth_col])].columns
 
     # Bin numerical columns, specifically 'age'
     for str_col, col_dict in numeric_cols_dict.items():
@@ -50,7 +50,7 @@ def match_cases(df1, df2, column) -> pd.DataFrame:
 
     :return: A DataFrame containing the matched cases
     """
-    merged_df = df1.merge(df2, on=column, how='inner') #, suffixes=('_truth', '_ai'))
+    merged_df = df1.merge(df2, on=column, how='inner')  # , suffixes=('_truth', '_ai'))
     return merged_df
 
 
@@ -90,6 +90,7 @@ def determine_valid_n_reference_groups(df, categories, min_count=10) -> Tuple[di
 
     return reference_groups, valid_groups, filtered_df
 
+
 def save_pickled_data(output_config: dict, metric: str, data: any):
     """
     Save pickled data to a file
@@ -105,6 +106,7 @@ def save_pickled_data(output_config: dict, metric: str, data: any):
         with open(filename, 'wb') as f:
             pickle.dump(data, f)
 
+
 def check_required_columns(df: pd.DataFrame, columns: List[str]) -> None:
     """
     Raise an error if any required column is missing.
@@ -115,6 +117,7 @@ def check_required_columns(df: pd.DataFrame, columns: List[str]) -> None:
     missing = [col for col in columns if col not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
+
 
 @dataclass(frozen=True)
 class TestAndDemographicData:

@@ -12,6 +12,7 @@ from tqdm_joblib import tqdm_joblib
 from data_loading import TestAndDemographicData, check_required_columns
 from plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
 
+
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4
                     ) -> pd.DataFrame:
     """
@@ -32,6 +33,7 @@ def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], 
     df[cols] = (df[cols] >= threshold).astype(int)
     return df
 
+
 def resample_by_column(df: pd.DataFrame, col: str, seed: int) -> pd.DataFrame:
     """
     Resample each group in a DataFrame by the specified column
@@ -48,6 +50,7 @@ def resample_by_column(df: pd.DataFrame, col: str, seed: int) -> pd.DataFrame:
         for _, group_df in df.groupby(col)
     ]
     return pd.concat(sampled_groups)
+
 
 def compute_bootstrap_eod_aaod(
     df: pd.DataFrame,
@@ -96,6 +99,7 @@ def compute_bootstrap_eod_aaod(
         results[model] = (eod, aaod)
 
     return results
+
 
 def calculate_eod_aaod(
     test_data: TestAndDemographicData
@@ -153,6 +157,7 @@ def calculate_eod_aaod(
                 }
     return eod_aaod
 
+
 def extract_plot_data_eod_aaod(
     eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]],
     model: str,
@@ -183,6 +188,7 @@ def extract_plot_data_eod_aaod(
 
     return groups, values, lower_bounds, upper_bounds
 
+
 def generate_plot_data_eod_aaod(
     eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]],
     test_cols: List[str],
@@ -209,6 +215,7 @@ def generate_plot_data_eod_aaod(
 
     global_min, global_max = min(all_values) - 0.05, max(all_values) + 0.05
     return plot_data_dict, global_min, global_max
+
 
 def plot_data_eod_aaod(
     plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]],

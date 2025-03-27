@@ -49,6 +49,7 @@ def calculate_kappas_and_intervals(
 
     return kappas, intervals
 
+
 def bootstrap_kappa(
     # df: pd.DataFrame, truth_col: str, models: Union[List[str], Any], n_iter: int = 1000,
     # n_jobs: int = -1, base_seed: Optional[int] = None
@@ -85,6 +86,7 @@ def bootstrap_kappa(
     kappa_dict = dict(zip(models, zip(*kappas_2d)))
     return kappa_dict
 
+
 def calculate_delta_kappa(
     # df: pd.DataFrame, categories: List[str], reference_groups: Dict[str, Any], valid_groups: Dict[str, List[Any]],
     # truth_col: str, ai_columns: List[str], n_iter: int = 1000, base_seed: Optional[int] = None
@@ -98,7 +100,6 @@ def calculate_delta_kappa(
     :returns: Dictionary of delta quadratic weighted kappa values with 95% confidence intervals.
     """
     delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]] = {}
-    rng = np.random.default_rng(test_data.base_seed)
     df = test_data.matched_df
 
     for category in tqdm(test_data.categories, desc="Categories", position=0):
@@ -114,7 +115,6 @@ def calculate_delta_kappa(
                 continue
 
             filtered_df = df[df[category] == value]
-            group_seed = int(rng.integers(0, 1_000_000))
 
             # Create a shallow copy of test_data and update matched_df with filtered_df
             filtered_test_data = replace(test_data, matched_df=filtered_df)
@@ -137,6 +137,7 @@ def calculate_delta_kappa(
                     (float(lower_value), float(upper_value))
                     )
     return delta_kappas
+
 
 def extract_plot_data(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
                       model_name: str) -> Tuple[List[str], List[float], List[float], List[float]]:
@@ -161,6 +162,7 @@ def extract_plot_data(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, T
                 lower_bounds.append(lower_ci)
                 upper_bounds.append(upper_ci)
     return groups, values, lower_bounds, upper_bounds
+
 
 def generate_plots_from_delta_kappas(
     delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
@@ -203,6 +205,7 @@ def generate_plots_from_delta_kappas(
 
     display_figures_grid(figures)
     plt.show()
+
 
 def print_table_of_nonzero_deltas(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
                                   tablefmt: str = "grid") -> None:

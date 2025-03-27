@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+# extend-ignore = I201
+application-import-names = data_loading, data_preprocessing, eod_aaod_metrics, plot_tools, qwk_metrics
+import-order-style = google
+max-complexity = 10
+exclude = .git, .venv, .vscode, __pycache__, .vscode, .ipynb_checkpoints, .pytest, tests, data, output

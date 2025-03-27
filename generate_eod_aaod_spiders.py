@@ -27,7 +27,11 @@ if __name__ == '__main__':
     metrics = ['eod', 'aaod']
     plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_data.test_cols, metrics=metrics)
     base_plot_data = SpiderPlotData(ylim_min=global_min, ylim_max=global_max, plot_config=config['plot'])
-    figures_dict = plot_data_eod_aaod(plot_data_dict, test_data.test_cols, metrics=metrics, base_plot_data=base_plot_data)
+    figures_dict = plot_data_eod_aaod(plot_data_dict,
+                                      test_data.test_cols,
+                                      metrics=metrics,
+                                      base_plot_data=base_plot_data,
+                                      )
 
     plt.show()
 
