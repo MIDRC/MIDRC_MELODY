@@ -1,29 +1,73 @@
 """ Plotting tools for visualizing model performance metrics. """
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+@dataclass
+class SpiderPlotData:
+    model_name: str = ""
+    groups: List[str] = field(default_factory=list)
+    values: List[float] = field(default_factory=list)
+    lower_bounds: List[float] = field(default_factory=list)
+    upper_bounds: List[float] = field(default_factory=list)
+    ylim_min: float = 0.0
+    ylim_max: float = 1.0
+    metric: str = ""
+    plot_config: Dict[str, Any] = field(default_factory=dict)
 
-def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, global_min, global_max, metric=None, plot_config: dict = None) -> plt.Figure:
+def get_angle_rot(start_loc: str) -> float:
+    """
+    Get the angle rotation based on the starting location.
+
+    :arg start_loc: Starting location string
+
+    :returns: Angle rotation in radians
+    """
+    if start_loc.startswith('t'):
+        return np.pi / 2
+    elif start_loc.startswith('l'):
+        return np.pi
+    elif start_loc.startswith('b'):
+        return 3 * np.pi / 2
+    return 0
+
+def get_angles(num_axes: int, plot_config: dict) -> list:
+    """
+    Get the angles for the spider chart axes.
+
+    :arg num_axes: Number of axes
+    :arg plot_config: Plot configuration dictionary
+
+    :returns: List of angles in radians
+    """
+    angles = np.linspace(0, 2 * np.pi, num_axes, endpoint=False).tolist()
+    if plot_config.get('clockwise', False):  # matplotlib default is counter-clockwise
+        angles.reverse()
+    angle_rot = get_angle_rot(plot_config.get('start', 'right'))  # matplotlib default is right)
+    angles = [(angle + angle_rot) % (2 * np.pi) for angle in angles]
+    return angles
+
+def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
     """
     Plot a spider chart for the given groups, values, and bounds.
 
-    :arg groups: List of group names
-    :arg values: List of values for each group
-    :arg lower_bounds: List of lower bounds for each group
-    :arg upper_bounds: List of upper bounds for each group
-    :arg model_name: Name of the model
-    :arg global_min: Global minimum value for the plot
-    :arg global_max: Global maximum value for the plot
-    :arg metric: Metric to display on the plot
-    :arg plot_config: Optional configuration dictionary for the plot
+    :arg plot_data: SpiderPlotData object containing the following fields:
+        - `model_name`: Name of the model
+        - `groups` (List[str]): List of group names
+        - `values`: List of values for each group
+        - `lower_bounds`: List of lower bounds for each group
+        - `upper_bounds`: List of upper bounds for each group
+        - `ylim_min`: Minimum value for the y-axis
+        - `ylim_max`: Maximum value for the y-axis
+        - `metric`: Metric to display on the plot
+        - `plot_config`: Optional configuration dictionary for the plot
 
     :returns: Matplotlib figure object
     """
     # Sort groups so that within each attribute they appear in order
-    if plot_config is None:
-        plot_config = {}
-    custom_orders = plot_config.get('custom_orders', None)
+    custom_orders = plot_data.plot_config.get('custom_orders', None)
     if custom_orders is None:
         custom_orders = {
             'age_binned': ['18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+'],
@@ -40,24 +84,11 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
             return (attr_order, order.index(group)) if group in order else (attr_order, len(order))
         return len(custom_orders), group
 
-    combined = list(zip(groups, values, lower_bounds, upper_bounds))
+    combined = list(zip(plot_data.groups, plot_data.values, plot_data.lower_bounds, plot_data.upper_bounds))
     combined.sort(key=lambda x: group_sort_key(x[0], custom_orders))
     groups, values, lower_bounds, upper_bounds = zip(*combined)
 
-    num_axes = len(groups)
-    angles = np.linspace(0, 2 * np.pi, num_axes, endpoint=False).tolist()
-    if plot_config.get('clockwise', False):  # matplotlib default is counter-clockwise
-        angles.reverse()
-    start_loc = plot_config.get('start', 'right')  # matplotlib default is right
-    if start_loc.startswith('t'):
-        angle_rot = np.pi / 2
-    elif start_loc.startswith('l'):
-        angle_rot = np.pi
-    elif start_loc.startswith('b'):
-        angle_rot = 3 * np.pi / 2
-    else:
-        angle_rot = 0
-    angles = [(angle + angle_rot) % (2 * np.pi) for angle in angles]
+    angles = get_angles(len(groups), plot_data.plot_config)
 
     # Close the loop for the plotted series
     values, lower_bounds, upper_bounds = map(lambda x: list(x) + [x[0]], [values, lower_bounds, upper_bounds])
@@ -68,29 +99,32 @@ def plot_spider_chart(groups, values, lower_bounds, upper_bounds, model_name, gl
     # Plot the main line and markers
     ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2)
     ax.scatter(angles, values, marker='o', color='b')
-    ax.set_ylim(global_min, global_max)
+    ax.set_ylim(plot_data.ylim_min, plot_data.ylim_max)
 
-    if metric is not None:
-        if metric.upper() == 'QWK':
+    if plot_data.metric is not None:
+        metric = plot_data.metric.upper()
+        if metric == 'QWK':
             # Instead of drawing a line between the vertices for baseline,
             # generate a smooth circle at the 0-level.
             theta_full = np.linspace(0, 2 * np.pi, 100)
             baseline_circle = np.full_like(theta_full, 0)
             ax.plot(theta_full, baseline_circle, color='seagreen', linestyle='--', linewidth=3, alpha=0.8)
-        elif metric.upper() == 'EOD':
+        elif metric == 'EOD':
             ax.fill_between(angles, -0.1, 0.1, color='lightgreen', alpha=0.5)
-        elif metric.upper() == 'AAOD':
+        elif metric == 'AAOD':
             ax.fill_between(angles, 0, 0.1, color='lightgreen', alpha=0.5)
-            ax.set_ylim(0, global_max)
+            ax.set_ylim(0, plot_data.ylim_max)
+    else:
+        metric = None
 
 
     ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2)
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(groups, fontsize=8, ha='center')
-    title = '' if metric is None else f'{metric.upper()} ' + f'Spider Plot for {model_name}'
+    title = '' if metric is None else f'{metric} ' + f'Spider Plot for {plot_data.model_name}'
     ax.set_title(title, size=14, weight='bold')
 
-    if metric.upper() == 'QWK':  # This is a QWK plot
+    if metric == 'QWK':  # This is a QWK plot
         # Emphasize tick labels based on bounds.
         # Iterate over the tick labels (skipping the last repeated label)
         for i, label in enumerate(ax.get_xticklabels()):

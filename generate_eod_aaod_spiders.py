@@ -12,7 +12,7 @@ from tqdm_joblib import tqdm_joblib
 import yaml
 
 from data_loading import build_test_and_demographic_data, TestAndDemographicData, save_pickled_data, check_required_columns
-from plot_tools import plot_spider_chart, display_figures_grid
+from plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
 
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4) -> pd.DataFrame:
     """
@@ -232,11 +232,20 @@ def plot_data_eod_aaod(
     :returns: Dictionary of generated figures for each metric.
     """
     figures_dict: Dict[str, List[Any]] = {metric: [] for metric in metrics}
+    base_plot_data = SpiderPlotData(
+        ylim_min=global_min,
+        ylim_max=global_max,
+        plot_config=plot_config
+    )
     for metric in metrics:
         for model in test_cols:
-            groups, values, lower, upper = plot_data_dict[metric][model]
-            fig = plot_spider_chart(groups, values, lower, upper, model, global_min, global_max,
-                                    metric=metric, plot_config=plot_config)
+            # Create a new copy based on the base instance
+            plot_data = SpiderPlotData(**base_plot_data.__dict__)
+            plot_data.metric = metric
+            plot_data.model_name = model
+            plot_data.groups, plot_data.values, plot_data.lower_bounds, plot_data.upper_bounds = \
+                extract_plot_data_eod_aaod(eod_aaod, model, metric)
+            fig = plot_spider_chart(plot_data)
             figures_dict[metric].append(fig)
 
     for figures in figures_dict.values():

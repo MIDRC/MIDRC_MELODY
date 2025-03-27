@@ -14,7 +14,7 @@ from tqdm_joblib import tqdm_joblib
 import yaml
 
 from data_loading import build_test_and_demographic_data, save_pickled_data, TestAndDemographicData
-from plot_tools import plot_spider_chart, display_figures_grid
+from plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
 
 
 def calculate_kappas_and_intervals(
@@ -187,10 +187,19 @@ def generate_plots_from_delta_kappas(
     global_max = max(all_upper) + 0.05
 
     figures = []
+    base_plot_data = SpiderPlotData(
+        ylim_min=global_min,
+        ylim_max=global_max,
+        plot_config=plot_config,
+        metric="QWK",
+    )
     for model in ai_models:
-        groups, values, lower_bounds, upper_bounds = extract_plot_data(delta_kappas, model)
-        fig = plot_spider_chart(groups, values, lower_bounds, upper_bounds, model, global_min, global_max,
-                                metric="QWK", plot_config=plot_config)
+        # Create a new copy based on the base instance
+        plot_data = SpiderPlotData(**base_plot_data.__dict__)
+        plot_data.model_name = model
+        plot_data.groups, plot_data.values, plot_data.lower_bounds, plot_data.upper_bounds = \
+            extract_plot_data(delta_kappas, model)
+        fig = plot_spider_chart(plot_data)
         figures.append(fig)
 
     display_figures_grid(figures)
