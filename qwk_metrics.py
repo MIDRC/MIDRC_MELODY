@@ -50,11 +50,7 @@ def calculate_kappas_and_intervals(
     return kappas, intervals
 
 
-def bootstrap_kappa(
-    # df: pd.DataFrame, truth_col: str, models: Union[List[str], Any], n_iter: int = 1000,
-    # n_jobs: int = -1, base_seed: Optional[int] = None
-    test_data: TestAndDemographicData, n_jobs: int = -1
-) -> Dict[str, Tuple]:
+def bootstrap_kappa(test_data: TestAndDemographicData, n_jobs: int = -1) -> Dict[str, List[float]]:
     """
     Perform bootstrap estimation of quadratic weighted kappa scores for each model in parallel.
 
@@ -69,13 +65,13 @@ def bootstrap_kappa(
     rng = np.random.default_rng(test_data.base_seed)
     seeds = rng.integers(0, 1_000_000, size=test_data.n_iter)
 
-    def resample_and_compute_kappa(df: pd.DataFrame, truth_col: str, models: List[str], seed: int) -> List[float]:
+    def resample_and_compute_kappa(df: pd.DataFrame, truth_col: str, _models: List[str], seed: int) -> List[float]:
         sampled_df = resample(df, replace=True, random_state=seed)
         return [
             cohen_kappa_score(sampled_df[truth_col].to_numpy(dtype=int),
                               sampled_df[model].to_numpy(dtype=int),
                               weights='quadratic')
-            for model in models
+            for model in _models
         ]
 
     with tqdm_joblib(total=test_data.n_iter, desc="Bootstrapping", leave=False):
@@ -109,7 +105,7 @@ def calculate_delta_kappa(
         delta_kappas[category] = {model: {} for model in test_data.test_cols}
         unique_values = df[category].unique().tolist()
 
-        kappa_dicts = {}
+        kappa_dicts: Dict[str, Dict[str, List[float]]] = {}
         for value in tqdm(unique_values, desc=f"Category \033[1m{category}\033[0m Groups", leave=False, position=1):
             if value not in test_data.valid_groups[category]:
                 continue
