@@ -2,7 +2,7 @@
 
 This project calculates and visualizes bootstrapped metrics for multiple AI models. It performs two main tasks:  
 - Calculation of Quadratic Weighted Kappa (QWK) differences, with bootstrapping and spider plot visualizations.  
-- Calculation of EOD (Equal Opportunity Difference) and AAOD (Average Absolute Opportunity Difference) metrics with bootstrap confidence intervals and corresponding spider plots.
+- Calculation of EOD (Equal Opportunity Difference) and AAOD (Average Absolute Odds Difference) metrics with bootstrap confidence intervals and corresponding spider plots.
 
 ## Overview
 
