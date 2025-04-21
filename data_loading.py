@@ -1,6 +1,7 @@
 """ Data Loading and Preprocessing Functions """
 
 from dataclasses import dataclass
+from pathlib import Path
 import pickle
 import time
 from typing import List, Tuple, Dict, Any, Optional
@@ -8,6 +9,21 @@ from typing import List, Tuple, Dict, Any, Optional
 import pandas as pd
 
 from data_preprocessing import bin_dataframe_column
+
+
+def check_file_exists(file_path: str, key_name: str, config_file: str) -> None:
+    """
+    Check if a file exists and exit gracefully with an error message if it doesn't.
+
+    :arg file_path: Path to the file to check.
+    :arg key_name: Key name in the configuration file.
+    :arg config_file: Name of the configuration file.
+    """
+    if not Path(file_path).exists():
+        print(f"Error: The file specified for '{key_name}' ('{file_path}') does not exist.")
+        print(f"Please update the '{key_name}' path in the '{config_file}' file to point to a valid file.")
+        print("Ensure the path is correct and accessible.")
+        sys.exit(1)
 
 
 def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict) -> Tuple[pd.DataFrame, list, list]:
@@ -19,8 +35,16 @@ def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict) -> T
 
     :return: A tuple containing the matched DataFrame, a list of categories, and a list of test columns
     """
-    df_truth = pd.read_csv(input_data['truth file'])
-    df_test = pd.read_csv(input_data['test scores'])
+    truth_file = input_data['truth file']
+    test_scores_file = input_data['test scores']
+
+    # Check if files exist
+    check_file_exists(truth_file, 'truth file', 'config.yaml')
+    check_file_exists(test_scores_file, 'test scores', 'config.yaml')
+
+    # Read the truth and test scores files
+    df_truth = pd.read_csv(truth_file)
+    df_test = pd.read_csv(test_scores_file)
     uid_col = input_data.get('uid column', 'case_name')
     truth_col = input_data.get('truth column', 'truth')
 
@@ -103,6 +127,9 @@ def save_pickled_data(output_config: dict, metric: str, data: any):
     if metric_config.get('save', False):
         filename = f"{metric_config['file prefix']}{time.strftime('%Y%m%d%H%M%S')}.pkl"
         print(f'Saving {metric} data to filename:', filename)
+        # Create directory if it doesn't exist
+        Path(filename).parent.mkdir(parents=True, exist_ok=True)
+
         with open(filename, 'wb') as f:
             pickle.dump(data, f)
 
