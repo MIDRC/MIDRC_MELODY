@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import pickle
+import sys
 import time
 from typing import List, Tuple, Dict, Any, Optional
 
@@ -170,7 +171,8 @@ def build_test_and_demographic_data(config: Dict[str, Any]) -> TestAndDemographi
     :returns: TestAndDemographicData object
     """
     matched_df, categories, test_cols = create_matched_df_from_files(config['input data'], config['numeric_cols'])
-    reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories)
+    min_count = config.get('min count per category', 10)
+    reference_groups, valid_groups, _ = determine_valid_n_reference_groups(matched_df, categories, min_count=min_count)
     n_iter = config.get('bootstrap', {}).get('iterations', 1000)
     base_seed = config.get('bootstrap', {}).get('seed', None)
     truth_col = config['input data'].get('truth column', 'truth')

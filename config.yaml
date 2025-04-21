@@ -3,6 +3,10 @@ input data:
   test scores: data/test_scores.csv
   uid column: case_name
   truth column: truth
+
+# Values >= to the binary threshold are considered positive
+binary threshold: 4
+min count per category: 10
   
 bootstrap:
   iterations: 1000

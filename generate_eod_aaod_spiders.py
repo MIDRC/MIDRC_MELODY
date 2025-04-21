@@ -17,7 +17,8 @@ if __name__ == '__main__':
     t_data = build_test_and_demographic_data(config)
 
     # Binarize scores
-    matched_df = binarize_scores(t_data.matched_df, t_data.truth_col, t_data.test_cols, threshold=4)
+    threshold = config['binary threshold']
+    matched_df = binarize_scores(t_data.matched_df, t_data.truth_col, t_data.test_cols, threshold=threshold)
     test_data = replace(t_data, matched_df=matched_df)
 
     # Calculate EOD and AAOD
