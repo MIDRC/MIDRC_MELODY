@@ -34,7 +34,7 @@ def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], 
     return df
 
 
-def resample_by_column(df: pd.DataFrame, col: str, seed: int) -> pd.DataFrame:
+def resample_by_column(df: pd.DataFrame, col: Union[str, List[str]], seed: int) -> pd.DataFrame:
     """
     Resample each group in a DataFrame by the specified column
     using the same seed across groups.
@@ -74,7 +74,7 @@ def compute_bootstrap_eod_aaod(
 
     :returns: Dictionary of EOD and AAOD values for each model.
     """
-    sample_df = resample_by_column(df, category, seed)
+    sample_df = resample_by_column(df, [category, truth_col], seed)
     ref_df = sample_df[sample_df[category] == ref_group]
     group_df = sample_df[sample_df[category] == group_value]
 
