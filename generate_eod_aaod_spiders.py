@@ -5,7 +5,7 @@ import yaml
 import matplotlib.pyplot as plt
 
 from data_loading import build_test_and_demographic_data, save_pickled_data
-from eod_aaod_metrics import binarize_scores, calculate_eod_aaod, generate_plot_data_eod_aaod, plot_data_eod_aaod
+from eod_aaod_metrics import binarize_scores, calculate_eod_aaod, generate_plot_data_eod_aaod, plot_data_eod_aaod, print_table_of_nonzero_eod_aaod
 from plot_tools import SpiderPlotData
 
 if __name__ == '__main__':
@@ -24,6 +24,9 @@ if __name__ == '__main__':
     # Calculate EOD and AAOD
     eod_aaod = calculate_eod_aaod(test_data)
 
+    # Print tables for EOD and AAOD using median values
+    print_table_of_nonzero_eod_aaod(eod_aaod, tablefmt="rounded_outline")
+
     # Generate and save plots
     metrics = ['eod', 'aaod']
     plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_data.test_cols, metrics=metrics)
@@ -39,3 +42,4 @@ if __name__ == '__main__':
     # Save the EOD and AAOD data
     for metric in metrics:
         save_pickled_data(config['output'], metric, plot_data_dict[metric])
+
