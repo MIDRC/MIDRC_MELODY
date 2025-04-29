@@ -91,7 +91,7 @@ MIDRC-MELODY requires two CSV input files:
   - truth: The ordinal reference standard values (e.g. 0-4).
   - One or more subgroup columns (e.g. manufacturer, race, scanner_type), each with categorical values for stratification.
   - Note:
-    - The largest subgroup for a given category is used as the reference group for delta QWK calculations.
+    - The largest subgroup for a given category is always used as the reference group.
     - Subgroups with too few cases (less than 10 by default) are excluded from the analysis.
 
 ### Generate QWK Spider Plots
