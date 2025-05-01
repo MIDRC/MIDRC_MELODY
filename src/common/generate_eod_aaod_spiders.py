@@ -4,13 +4,13 @@ from dataclasses import replace
 import yaml
 import matplotlib.pyplot as plt
 
-from data_loading import build_test_and_demographic_data, save_pickled_data
-from eod_aaod_metrics import binarize_scores, calculate_eod_aaod, generate_plot_data_eod_aaod, plot_data_eod_aaod, print_table_of_nonzero_eod_aaod
-from plot_tools import SpiderPlotData
+from common.data_loading import build_test_and_demographic_data, save_pickled_data
+from common.eod_aaod_metrics import binarize_scores, calculate_eod_aaod, generate_plot_data_eod_aaod, plot_data_eod_aaod, print_table_of_nonzero_eod_aaod
+from common.plot_tools import SpiderPlotData
 
-if __name__ == '__main__':
+def generate_eod_aaod_spiders(cfg_path: str = "config.yaml"):
     # Load configuration
-    with open('config.yaml', 'r', encoding='utf-8') as stream:
+    with open(cfg_path, 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
     # Load data
@@ -43,3 +43,5 @@ if __name__ == '__main__':
     for metric in metrics:
         save_pickled_data(config['output'], metric, plot_data_dict[metric])
 
+if __name__ == '__main__':
+    generate_eod_aaod_spiders()

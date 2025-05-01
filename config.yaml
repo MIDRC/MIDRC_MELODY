@@ -1,6 +1,6 @@
 input data:
-  truth file: data/test_truthNdemographics.csv
-  test scores: data/test_scores.csv
+  truth file: data/demo_truthNdemographics.csv
+  test scores: data/demo_scores.csv
   uid column: case_name
   truth column: truth
 

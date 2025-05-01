@@ -9,7 +9,7 @@ from typing import List, Tuple, Dict, Any, Optional
 
 import pandas as pd
 
-from data_preprocessing import bin_dataframe_column
+from common.data_preprocessing import bin_dataframe_column
 
 
 def check_file_exists(file_path: str, key_name: str, config_file: str) -> None:
@@ -40,8 +40,8 @@ def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict) -> T
     test_scores_file = input_data['test scores']
 
     # Check if files exist
-    check_file_exists(truth_file, 'truth file', 'config.yaml')
-    check_file_exists(test_scores_file, 'test scores', 'config.yaml')
+    check_file_exists(truth_file, 'truth file', '../../config.yaml')
+    check_file_exists(test_scores_file, 'test scores', '../../config.yaml')
 
     # Read the truth and test scores files
     df_truth = pd.read_csv(truth_file)

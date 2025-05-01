@@ -12,8 +12,8 @@ from tabulate import tabulate
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
-from data_loading import TestAndDemographicData
-from plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
+from common.data_loading import TestAndDemographicData
+from common.plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
 
 
 def calculate_kappas_and_intervals(

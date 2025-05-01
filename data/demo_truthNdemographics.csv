@@ -1,0 +1,501 @@
+case_name,truth,age,ethnicity,race,sex,intersectional_race_ethnicity
+1,2,41,Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+2,13,63,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+3,0,48,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+4,16,35,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+5,16,65,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+6,3,70,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+7,3,31,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+8,15,70,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+9,4,65,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+10,8,73,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+11,4,44,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+12,0,33,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+13,1,23,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+14,0,21,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+15,2,47,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+16,6,35,Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+17,10,56,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+18,0,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+19,0,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+20,4,25,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+21,15,68,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+22,9,46,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+23,1,58,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+24,0,36,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+25,2,54,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+26,0,25,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+27,0,85,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+28,18,56,Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+29,6,80,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+30,0,35,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+31,0,33,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+32,2,84,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+33,0,18,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+34,1,69,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+35,8,54,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+36,2,44,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+37,3,37,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+38,0,55,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+39,4,88,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+40,4,50,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+41,10,56,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+42,18,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+43,0,25,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+44,0,55,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+45,13,63,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+46,18,68,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+47,5,48,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+48,1,60,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+49,1,59,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+50,2,74,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+51,4,65,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+52,3,85,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+53,1,62,Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+54,7,75,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+55,0,52,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+56,4,82,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+57,8,41,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+58,0,44,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+59,0,40,Not Hispanic or Latino,Native Hawaiian or other Pacific Islander,Male,Not White or Hispanic or Latino
+60,1,19,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+61,1,50,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+62,3,57,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+63,0,52,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+64,12,80,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+65,2,47,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+66,2,69,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+67,0,24,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+68,1,55,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+69,12,55,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+70,24,71,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+71,6,36,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+72,9,83,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+73,6,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+74,0,78,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+75,1,35,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+76,16,59,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+77,16,23,Not Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+78,2,38,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+79,0,46,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+80,0,33,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+81,0,18,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+82,0,49,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+83,8,62,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+84,2,41,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+85,6,50,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+86,18,40,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+87,21,41,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+88,4,35,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+89,1,33,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+90,6,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+91,6,35,Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+92,8,35,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+93,11,NaN,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+94,3,54,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+95,6,29,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+96,5,48,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+97,0,71,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+98,8,73,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+99,0,18,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+100,0,35,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+101,17,NaN,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+102,0,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+103,10,63,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+104,15,65,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+105,4,32,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+106,1,51,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+107,0,21,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+108,6,79,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+109,18,58,Not Reported,White,Female,Not Reported
+110,2,58,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+111,0,30,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+112,0,72,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+113,8,77,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+114,12,74,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+115,0,27,Not Reported,White,Male,Not Reported
+116,2,82,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+117,0,89,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+118,2,25,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+119,3,37,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+120,2,34,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+121,0,29,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+122,0,25,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+123,6,48,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+124,11,NaN,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+125,8,38,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+126,1,56,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+127,9,75,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+128,0,25,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+129,2,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+130,10,87,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+131,1,46,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+132,2,44,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+133,24,39,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+134,6,66,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+135,18,58,Not Reported,White,Female,Not Reported
+136,20,61,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+137,1,69,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+138,9,56,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+139,4,18,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+140,6,79,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+141,1,50,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+142,0,65,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+143,3,79,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+144,4,65,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+145,6,55,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+146,8,84,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+147,24,71,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+148,8,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+149,5,32,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+150,4,81,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+151,24,82,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+152,2,42,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+153,2,45,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+154,8,30,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+155,2,67,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+156,24,63,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+157,24,71,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+158,12,64,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+159,2,85,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+160,0,46,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+161,16,27,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+162,4,41,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+163,0,29,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+164,1,56,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+165,5,48,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+166,2,58,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+167,2,22,Not Hispanic or Latino,American Indian or Alaska Native,Female,Not White or Hispanic or Latino
+168,1,32,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+169,2,74,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+170,3,57,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+171,0,40,Not Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+172,2,41,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+173,4,81,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+174,12,63,Not Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+175,8,54,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+176,8,44,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+177,4,34,Not Hispanic or Latino,Not Reported,Male,Not Reported
+178,2,54,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+179,5,65,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+180,1,74,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+181,18,75,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+182,2,71,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+183,0,37,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+184,0,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+185,1,62,Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+186,8,NaN,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+187,4,78,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+188,10,88,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+189,0,29,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+190,2,67,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+191,0,48,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+192,0,89,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+193,2,47,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+194,6,32,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+195,4,78,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+196,0,60,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+197,4,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+198,12,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+199,8,26,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+200,2,45,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+201,6,66,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+202,0,30,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+203,0,49,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+204,12,62,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+205,8,84,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+206,4,70,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+207,16,23,Not Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+208,2,56,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+209,4,24,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+210,11,85,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+211,18,45,Not Reported,Not Reported,Female,Not Reported
+212,21,41,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+213,24,82,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+214,2,48,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+215,3,46,Not Reported,White,Male,Not Reported
+216,0,52,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+217,0,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+218,16,23,Not Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+219,6,29,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+220,0,78,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+221,0,55,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+222,0,43,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+223,24,20,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+224,24,52,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+225,18,75,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+226,1,61,Hispanic or Latino,Not Reported,Female,Not White or Hispanic or Latino
+227,0,34,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+228,18,61,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+229,0,51,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+230,0,62,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+231,0,46,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+232,3,85,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+233,1,83,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+234,2,54,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+235,10,87,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+236,12,63,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+237,18,32,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+238,2,36,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+239,11,60,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+240,0,21,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+241,6,47,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+242,2,52,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+243,2,28,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+244,2,58,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+245,20,50,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+246,1,61,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+247,20,61,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+248,1,53,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+249,16,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+250,9,47,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+251,1,77,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+252,6,89,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+253,4,85,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+254,8,28,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+255,4,53,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+256,0,21,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+257,0,43,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+258,6,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+259,12,67,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+260,0,20,Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+261,0,27,Not Reported,White,Male,Not Reported
+262,3,67,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+263,24,37,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+264,0,62,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+265,3,68,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+266,2,43,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+267,3,49,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+268,0,57,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+269,12,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+270,24,33,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+271,10,62,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+272,0,52,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+273,0,66,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+274,0,42,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+275,8,77,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+276,2,69,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+277,0,20,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+278,0,27,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+279,4,32,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+280,0,25,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+281,2,59,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+282,5,77,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+283,2,21,Hispanic or Latino,Not Reported,Male,Not White or Hispanic or Latino
+284,3,33,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+285,0,46,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+286,3,72,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+287,2,67,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+288,5,71,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+289,21,41,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+290,4,88,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+291,0,28,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+292,0,19,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+293,2,45,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+294,8,69,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+295,8,78,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+296,0,31,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+297,3,81,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+298,10,45,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+299,2,54,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+300,0,50,Not Reported,White,Female,Not Reported
+301,18,61,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+302,1,29,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+303,0,25,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+304,5,64,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+305,2,69,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+306,18,68,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+307,9,27,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+308,1,86,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+309,0,69,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+310,1,84,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+311,0,27,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+312,20,81,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+313,18,68,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+314,4,67,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+315,0,33,Not Reported,Not Reported,Female,Not Reported
+316,16,27,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+317,6,60,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+318,24,82,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+319,0,20,Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+320,6,89,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+321,0,62,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+322,0,18,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+323,2,47,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+324,0,26,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+325,4,45,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+326,4,84,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+327,24,44,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+328,9,73,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+329,1,51,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+330,3,79,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+331,18,56,Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+332,4,77,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+333,2,33,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+334,16,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+335,0,65,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+336,8,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+337,5,38,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+338,0,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+339,1,56,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+340,3,62,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+341,0,18,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+342,0,34,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+343,2,47,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+344,0,78,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+345,6,54,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+346,12,63,Not Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+347,0,69,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+348,1,77,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+349,3,61,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+350,2,52,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+351,6,79,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+352,24,39,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+353,0,46,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+354,18,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+355,0,21,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+356,1,57,Hispanic or Latino,Not Reported,Male,Not White or Hispanic or Latino
+357,0,23,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+358,2,38,Not Hispanic or Latino,Asian,Male,Not White or Hispanic or Latino
+359,6,18,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+360,0,35,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+361,2,29,Hispanic or Latino,Not Reported,Female,Not White or Hispanic or Latino
+362,0,27,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+363,2,69,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+364,10,29,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+365,11,60,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+366,1,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+367,1,68,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+368,0,67,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+369,3,59,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+370,2,40,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+371,10,62,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+372,1,68,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+373,24,52,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+374,4,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+375,2,23,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+376,4,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+377,0,55,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+378,1,62,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+379,2,19,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+380,0,62,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+381,7,73,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+382,6,31,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+383,8,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+384,2,67,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+385,0,49,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+386,0,62,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+387,0,55,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+388,4,28,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+389,0,34,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+390,0,25,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+391,2,41,Not Reported,Not Reported,Female,Not Reported
+392,0,65,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+393,0,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+394,8,NaN,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+395,3,62,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+396,6,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+397,9,83,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+398,0,56,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+399,1,31,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+400,1,50,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+401,0,20,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+402,3,86,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+403,0,59,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+404,2,63,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+405,2,78,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+406,0,56,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+407,0,65,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+408,3,62,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+409,0,65,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+410,4,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+411,6,80,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+412,4,70,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+413,1,40,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+414,16,65,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+415,8,57,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+416,10,62,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+417,3,31,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+418,11,NaN,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+419,8,77,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+420,2,47,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+421,4,64,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+422,7,73,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+423,6,79,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+424,10,33,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+425,24,49,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+426,11,74,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+427,1,57,Hispanic or Latino,Not Reported,Male,Not White or Hispanic or Latino
+428,6,28,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+429,2,NaN,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+430,0,18,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+431,1,23,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+432,7,78,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+433,1,NaN,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+434,3,33,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+435,2,21,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+436,4,61,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+437,0,21,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+438,3,73,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+439,20,81,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+440,2,22,Not Hispanic or Latino,American Indian or Alaska Native,Female,Not White or Hispanic or Latino
+441,5,73,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+442,1,68,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+443,0,23,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+444,2,47,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+445,4,22,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+446,2,72,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+447,0,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+448,12,71,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+449,0,19,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+450,2,22,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+451,24,44,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+452,18,61,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+453,8,38,Hispanic or Latino,White,Female,Not White or Hispanic or Latino
+454,0,76,Not Reported,White,Female,Not Reported
+455,6,28,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+456,2,54,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+457,2,32,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+458,0,39,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+459,3,70,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+460,4,77,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+461,0,44,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+462,0,43,Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+463,4,22,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+464,0,42,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+465,0,26,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+466,0,74,Hispanic or Latino,White,Male,Not White or Hispanic or Latino
+467,6,89,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+468,0,40,Not Hispanic or Latino,Other,Female,Not White or Hispanic or Latino
+469,2,41,Not Reported,Not Reported,Female,Not Reported
+470,18,58,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+471,2,43,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+472,2,70,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+473,6,61,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+474,4,66,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+475,13,64,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+476,1,55,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+477,0,22,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+478,0,39,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino
+479,3,63,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+480,8,56,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+481,3,54,Hispanic or Latino,Other,Male,Not White or Hispanic or Latino
+482,2,47,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+483,24,19,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+484,8,67,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+485,0,62,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+486,2,21,Not Hispanic or Latino,Black or African American,Male,Not White or Hispanic or Latino
+487,1,60,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+488,0,25,Not Hispanic or Latino,Asian,Female,Not White or Hispanic or Latino
+489,2,60,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+490,8,78,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+491,1,61,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+492,1,23,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+493,1,23,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+494,6,79,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+495,15,68,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+496,24,71,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+497,2,76,Not Hispanic or Latino,White,Male,White and Not HispanicLatino
+498,5,75,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+499,10,87,Not Hispanic or Latino,White,Female,White and Not HispanicLatino
+500,0,25,Not Hispanic or Latino,Black or African American,Female,Not White or Hispanic or Latino

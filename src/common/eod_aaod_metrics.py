@@ -9,8 +9,8 @@ from sklearn.utils import resample
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
-from data_loading import TestAndDemographicData, check_required_columns
-from plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
+from common.data_loading import TestAndDemographicData, check_required_columns
+from common.plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
 
 
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4

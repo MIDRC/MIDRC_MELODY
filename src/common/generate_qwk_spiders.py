@@ -1,13 +1,13 @@
 """This script generates QWK spider plots for multiple models across different categories."""
 import yaml
 
-from data_loading import build_test_and_demographic_data, save_pickled_data
-from qwk_metrics import (calculate_kappas_and_intervals, calculate_delta_kappa, generate_plots_from_delta_kappas,
+from common.data_loading import build_test_and_demographic_data, save_pickled_data
+from common.qwk_metrics import (calculate_kappas_and_intervals, calculate_delta_kappa, generate_plots_from_delta_kappas,
                          print_table_of_nonzero_deltas)
 
-if __name__ == '__main__':
+def generate_qwk_spiders(cfg_path: str = "config.yaml"):
     # Load configuration
-    with open('config.yaml', 'r', encoding='utf-8') as stream:
+    with open(cfg_path, 'r', encoding='utf-8') as stream:
         config = yaml.load(stream, Loader=yaml.CLoader)
 
     # Load data
@@ -28,3 +28,6 @@ if __name__ == '__main__':
 
     # Save the delta Kappas
     save_pickled_data(config['output'], "QWK", delta_kappas)
+
+if __name__ == '__main__':
+    generate_qwk_spiders()
