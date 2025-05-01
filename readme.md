@@ -1,6 +1,6 @@
 # MIDRC MELODY (Model EvaLuation across subgroups for cOnsistent Decision accuracY)
 
-[Overview](#overview) | [Requirements](#requirements) | [Setup](#setup) | [Usage](#usage) | [License](#license)
+[Overview](#overview) | [Installation](#installation) | [CLI Commands](#cli-commands) | [Configuration](#configuration) | [License](#license)
 
 [📱 Visit MIDRC Website](https://www.midrc.org/)
 
