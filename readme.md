@@ -1,150 +1,23 @@
-# MIDRC-MELODY (Model EvaLuation across subgroups for cOnsistent Decision accuracY)
+# MIDRC MELODY (Model EvaLuation across subgroups for cOnsistent Decision accuracY)
 
 [Overview](#overview) | [Requirements](#requirements) | [Setup](#setup) | [Usage](#usage) | [License](#license)
 
 [📱 Visit MIDRC Website](https://www.midrc.org/)
 
-**MIDRC-MELODY** is a tool designed to assess the performance and subgroup-level reliability and robustness of AI models
+**MIDRC MELODY** is a tool designed to assess the performance and subgroup-level reliability and robustness of AI models
 developed for medical imaging analysis tasks, such as the estimation of disease severity. It enables consistent
 evaluation of models across predefined subgroups (e.g. manufacturer, race, scanner type) by computing intergroup
 performance metrics and corresponding confidence intervals.
 
 The tool supports two types of evaluation:
+
 - **Ordinal Estimation Task Evaluation**:
   - Uses an ordinal reference standard ("truth") and ordinal AI model outputs.
   - Performance in terms of agreement of AI output with the reference standard "truth" is quantified using the **quadratic
     weighted kappa (QWK)** metric.
-  - Subgroup reliability is assessed using the **delta QWK** metric, which quantifies the difference in QWK between a reference
-    subgroup and other subgroups.
-  - A delta QWK whose 95% confidence interval does not include 0 indicates a statistically significant difference in performance
-    between the reference subgroup and the other subgroup.
-- **Binary Classification Task Evaluation**:
-  - The ordinal "truth" values are binarized into two classes (e.g. "positive" and "negative") based on a user-defined threshold.
-  - The same ordinal AI model outputs are used, but the evaluation is performed as a binary classification task.
-  - Reliability across subgroups is assessed using:
-    - **Equal Opportunity Difference (EOD)** metric, which quantifies the difference in true positive rates between a reference
-      subgroup and other subgroups.
-    - **Average Absolute Odds Difference (AAOD)** metric, which is the average of the absolute differences in true positive
-      rates and false positive rates between a reference subgroup and other subgroups.
-  - An EOD *outside* the range [-0.1, 0.1] and AAOD outside the range [0.0, 0.1] are typically defined as indicating
-    an observable discrepancy in model performance across subgroups.
-
-
-## Overview
-
-The project consists of two main scripts:
-- `generate_qwk_spiders.py`: Computes delta QWK values for different groups, applies bootstrapping for confidence intervals and generates spider plot visualizations.
-- `generate_eod_aaod_spiders.py`: Calculates bootstrapped estimates for EOD and AAOD metrics across multiple categories and generates spider charts to visualize these measures.
-
-Additional modules such as `data_loading.py` and `plot_tools.py` provide functions to load data, check required columns, and generate plots. Common functionalities are consolidated into shared utility functions to adhere to DRY principles.
-
-## Requirements
-
-- Python 3.x
-- pip
-
-### Python Packages
-
-- matplotlib
-- numpy
-- pandas
-- joblib
-- scikit-learn
-- tqdm
-- tqdm\_joblib
-- pyyaml
-- tabulate
-
-## Setup
-
-1. Clone the repository to your local machine.
-2. Create a virtual environment (optional recommended):
-   ```bash
-   python -m venv venv
-   ```
-3. Activate the virtual environment (if created):
-   - On Windows: `venv\Scripts\activate`
-   - On macOS/Linux: `source venv/bin/activate`
-4. Install the MIDRC-MELODY package as a command line tool:
-   ```bash
-   pip install -e .
-   ```
-   or to install the package with the optional graphical user interface (GUI):
-   ```bash
-    pip install -e .[gui]
-    ```
-
-## Usage
-### Running the Scripts
-Once installed, execute the following command for the command line interface (CLI):
-```bash
-melody
-````
-This will start the MIDRC-MELODY CLI and provides a help message with available commands and options.
-
-#### Available Commands
-- `Calculate QWK metrics`: Computes delta QWK values for different groups and generates spider plots.
-- `Calculate EOD and AAOD metrics`: Computes EOD and AAOD metrics for binary classification tasks and generates spider plots.
-- `Print config file contents`: Displays the contents of the configuration file.
-- `Change config file`: Allows you to change the configuration file path.
-- `Launch GUI`: If the prerequisites for the GUI version are installed, this option will be displayed. Selecting this option will launch the GUI interface.
-- `Exit`: Exits the program.
-
-### Running the GUI version
-If you installed the GUI version, you may also run the following command:
-```bash
-melody_gui
-```
-
-### Configuration
-
-The project uses a YAML configuration file (`config.yaml`) to specify:
-- Input data and column names (truth column, numeric columns, etc.)
-- Bootstrap settings (seed and iterations)
-- Plot settings and output paths
-
-Ensure to update the configuration file according to your dataset and desired parameters.
-
-### Input Data
-MIDRC-MELODY requires two CSV input files:
-- **Model predictions**: It must include the following columns:
-  - case_name: Unique identifier for each case.
-  - One or more columns each containing a model's ordinal predictions.
-- **Reference standard**: It must include the following columns:
-  - case_name: Unique identifier for each case (must match the model predictions file).
-  - truth: The ordinal reference standard values (e.g. 0-4).
-  - One or more subgroup columns (e.g. manufacturer, race, scanner_type), each with categorical values for stratification.
-  - Note:
-    - The largest subgroup for a given category is always used as the reference group.
-    - Subgroups with too few cases (less than 10 by default) are excluded from the analysis.
-
-### Generate QWK Spider Plots
-
-Run the following command to execute the QWK spider plot script:
-```bash
-melody
-```
-and select the `Calculate QWK metrics` option.
-
-**This script**:
-- Loads the dataset.
-- Checks for required columns.
-- Calculates Cohen's quadratic weighted kappa and bootstrapped confidence intervals.
-- Computes delta kappa values comparing each group against a reference.
-- Generates and displays spider plots.
-- Saves the results to a pickle file.
-
-### Generate EOD & AAOD Spider Plots
-
-Run the following command to execute the EOD and AAOD spider plot script:
-```bash
-melody
-```
-and select the `Calculate EOD and AAOD metrics` option.
-
-**This script**:
-- Loads and preprocesses the dataset (including score binarization based on a threshold).
-- Computes EOD and AAOD metrics using bootstrapping across various groups.
+- **Binary Decision Task Evaluation**:
+  - Converts scores into binary decisions based on a threshold.
+  - Computes EOD and AAOD metrics using bootstrapping across various groups.
 - Generates spider plots comparing these metrics.
 - Saves the generated data for further analysis.
 
@@ -152,9 +25,113 @@ and select the `Calculate EOD and AAOD metrics` option.
 
 - **Bootstrapping:** Both scripts perform bootstrapping to compute confidence intervals for the respective metrics using NumPy's percentile method.
 - **Plotting:** Spider charts provide a visual overview of how each model's metrics vary across different groups and categories.
-- **Utilities:** Shared functionality is available in common utility modules (e.g., `data_loading.py` and `plot_tools.py`), ensuring easier maintenance and testing.
+- **Utilities:** Shared functionality is available in common utility modules (e.g., `data_tools.py` and `plot_tools.py`), ensuring easier maintenance and testing.
+
+## Overview
+
+**MIDRC MELODY** is a lightweight toolkit for stress‑testing medical‑imaging AI models across clinical and demographic sub‑groups. It supports both command‑line and GUI workflows, enabling rapid quantification of performance disparities (QWK, EOD, AAOD, etc.) and intuitive radar‑chart visualisation.
+
+- **Console‑first** – core metrics and plots run with **no GUI dependencies**.
+- **Opt‑in GUI** – an optional PySide6 interface for interactive configuration and result browsing.
+- **Config‑driven** – YAML files keep experiments reproducible and shareable.
+
+## Installation
+
+```bash
+# Install in editable/development mode
+pip install -e .
+
+# (Alternative) Minimal console install from PyPI
+# pip install midrc-melody
+
+# With GUI support
+pip install -e .[gui]
+```
+
+## Quick Start
+
+```bash
+# Run analysis (reads default config.yaml in current directory)
+melody
+
+# Launch the GUI (requires the [gui] extra)
+melody_gui
+```
+
+## CLI Commands
+
+Running `melody` opens a **Command‑Line Interface (CLI)**, which presents a text‑based menu of interactive commands. Here’s what you can do:
+
+#### Available Commands
+
+- **Calculate QWK metrics**: Computes delta QWK values for different subgroups and generates spider plots.
+- **Calculate EOD and AAOD metrics**: Computes EOD and AAOD metrics for binary decision tasks and generates spider plots.
+- **Print config file contents**: Displays the contents of the current YAML configuration file.
+- **Change config file**: Prompts you to enter and set a different configuration file path.
+- **Launch GUI**: Opens the Graphical User Interface (GUI) using PySide6 (requires PySide6).
+- **Exit**: Exits the program.
+
+## GUI (Optional)
+
+Launching the graphical interface only requires that PySide6 is installed. If you used the `[gui]` extra, the `melody_gui` command is available; otherwise you can still install PySide6 manually.
+
+```bash
+# If not already using editable install:
+# pip install -e .[gui]
+
+# or, if you already have the console-only install:
+pip install PySide6
+```
+
+```bash
+# Launch the GUI:
+melody_gui
+```
+
+## Configuration
+
+Experiments are described in a single YAML file. Below is a **minimal** example that keeps storage light and avoids plotting custom order metadata.
+
+```yaml
+input data:
+  truth file: data/demo_truthNdemographics.csv
+  test scores: data/demo_scores.csv
+  uid column: case_name
+  truth column: truth
+
+# Scores ≥ binary threshold are counted as positive
+binary threshold: 4
+min count per category: 10
+
+bootstrap:
+  iterations: 1000
+  seed: 42  # set to null for random entropy
+
+output:
+  qwk:  { save: false, file prefix: output/delta_kappas_ }
+  eod:  { save: false, file prefix: output/eod_ }
+  aaod: { save: false, file prefix: output/aaod_ }
+
+numeric_cols:
+  age_binned:
+    raw column: age
+    bins: [0, 18, 30, 40, 50, 65, 75, 85, .inf]
+
+plot:
+  clockwise: true            # rotate clockwise instead of CCW
+  start: top                 # starting angle: top, bottom, left, right (t/b/l/r)
+```
+
+## Input Data
+
+| File           | Required Columns            | Purpose                                   |
+| -------------- | --------------------------- | ----------------------------------------- |
+| **Truth file** | `uid`, `truth`, attributes… | Ground‑truth labels and subgroup columns. |
+| **Score file** | `uid`, `score`              | Model predictions keyed to the same UID.  |
+
+> UID values must match between truth and score files.
 
 ## License
 
-Apache License 2.0
+Distributed under the Apache 2.0 License.
 
