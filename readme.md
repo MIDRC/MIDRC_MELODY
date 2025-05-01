@@ -62,15 +62,39 @@ Additional modules such as `data_loading.py` and `plot_tools.py` provide functio
    ```bash
    python -m venv venv
    ```
-3. Activate the virtual environment:
+3. Activate the virtual environment (if created):
    - On Windows: `venv\Scripts\activate`
    - On macOS/Linux: `source venv/bin/activate`
-4. Install the required packages:
+4. Install the MIDRC-MELODY package as a command line tool:
    ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
+   or to install the package with the optional graphical user interface (GUI):
+   ```bash
+    pip install -e .[gui]
+    ```
 
 ## Usage
+### Running the Scripts
+Once installed, execute the following command for the command line interface (CLI):
+```bash
+melody
+````
+This will start the MIDRC-MELODY CLI and provides a help message with available commands and options.
+
+#### Available Commands
+- `Calculate QWK metrics`: Computes delta QWK values for different groups and generates spider plots.
+- `Calculate EOD and AAOD metrics`: Computes EOD and AAOD metrics for binary classification tasks and generates spider plots.
+- `Print config file contents`: Displays the contents of the configuration file.
+- `Change config file`: Allows you to change the configuration file path.
+- `Launch GUI`: If the prerequisites for the GUI version are installed, this option will be displayed. Selecting this option will launch the GUI interface.
+- `Exit`: Exits the program.
+
+### Running the GUI version
+If you installed the GUI version, you may also run the following command:
+```bash
+melody_gui
+```
 
 ### Configuration
 
@@ -98,9 +122,11 @@ MIDRC-MELODY requires two CSV input files:
 
 Run the following command to execute the QWK spider plot script:
 ```bash
-python generate_qwk_spiders.py
+melody
 ```
-This script:
+and select the `Calculate QWK metrics` option.
+
+**This script**:
 - Loads the dataset.
 - Checks for required columns.
 - Calculates Cohen's quadratic weighted kappa and bootstrapped confidence intervals.
@@ -112,9 +138,11 @@ This script:
 
 Run the following command to execute the EOD and AAOD spider plot script:
 ```bash
-python generate_eod_aaod_spiders.py
+melody
 ```
-This script:
+and select the `Calculate EOD and AAOD metrics` option.
+
+**This script**:
 - Loads and preprocesses the dataset (including score binarization based on a threshold).
 - Computes EOD and AAOD metrics using bootstrapping across various groups.
 - Generates spider plots comparing these metrics.

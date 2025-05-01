@@ -2,13 +2,18 @@
 from common.generate_eod_aaod_spiders import generate_eod_aaod_spiders
 from common.generate_qwk_spiders import generate_qwk_spiders
 
+try:
+    from melody_gui import launch_gui
+    gui_available = True
+except ImportError:
+    gui_available = False
+
 def main():
     config_path = "config.yaml"
     bold_start = "\033[1m"
     bold_end = "\033[0m"
 
     while True:
-        # Print application banner and current config file in bold
         print("\n*** MIDRC-MELODY ***")
         print(f"Current config file: {bold_start}{config_path}{bold_end}")
         print("Select an action:")
@@ -16,6 +21,8 @@ def main():
         print("2) Calculate QWK metrics")
         print("3) Print config file contents")
         print("4) Change config file")
+        if gui_available:
+            print("5) Launch GUI")
         print("0) Exit")
 
         choice = input("Enter your choice: ").strip()
@@ -40,6 +47,10 @@ def main():
             else:
                 print("Config file remains unchanged.")
             input("\nPress Enter to return to the menu...")
+        elif choice == "5" and gui_available:
+            launch_gui()
+            print("Finished launching GUI. Exiting...")
+            break
         elif choice == "0":
             print("Exiting...")
             break
