@@ -6,14 +6,17 @@ except ImportError:
                       "You can install it using the command:\n"
                       "pip install PySide6\n")
 
-def launch_gui():
+
+def launch_gui() -> None:
     app = QApplication([])
     window = MainWindow()
     window.show()
     app.exec()
 
+
 def main():
     launch_gui()
+
 
 if __name__ == "__main__":
     main()

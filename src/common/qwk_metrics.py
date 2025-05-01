@@ -34,6 +34,8 @@ def calculate_kappas_and_intervals(
     y_true = test_data.matched_df[test_data.truth_col].to_numpy(dtype=int)
 
     rng = np.random.default_rng(test_data.base_seed)
+    print('-'*50)
+    print("Overall Quadratic Weighted Kappa Scores:")
     for col in ai_cols:
         y_pred = test_data.matched_df[col].to_numpy(dtype=int)
         kappa = cohen_kappa_score(y_true, y_pred, weights='quadratic')
@@ -46,6 +48,7 @@ def calculate_kappas_and_intervals(
         lower_bnd, upper_bnd = np.percentile(kappa_scores, [2.5, 97.5])
         intervals[col] = (lower_bnd, upper_bnd)
         print(f"Model: {col} | Kappa: {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true)}")
+    print('-'*50)
 
     return kappas, intervals
 
@@ -206,41 +209,53 @@ def generate_plots_from_delta_kappas(
 def print_table_of_nonzero_deltas(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
                                   tablefmt: str = "grid") -> None:
     """
-    Print a table of delta kappas that have a 95% CI excluding zero.
-    Negative delta values are printed in maroon, positive in green.
+    Print two tables:
+      1. All delta kappa values.
+      2. Filtered delta kappas that have a 95% CI excluding zero.
+         Negative delta values are printed in maroon, positive in green.
 
     :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
     :arg tablefmt: Table format string for tabulate.
     """
-    results = []
+    from tabulate import tabulate
     # ANSI escape codes for maroon and green using 24-bit RGB colors
     maroon = "\033[38;2;128;0;0m"
     green = "\033[38;2;0;128;0m"
     reset = "\033[0m"
 
+    all_deltas = []
+    filtered = []
+
     for category, model_data in delta_kappas.items():
         for model, groups in model_data.items():
             for group, (delta, (lower_ci, upper_ci)) in groups.items():
-                if lower_ci > 0 or upper_ci < 0:
-                    # Color the delta value based on its sign
+                qualifies = (lower_ci > 0 or upper_ci < 0)
+                if qualifies:
                     color = maroon if delta < 0 else green
-                    results.append([
-                        model,
-                        category,
-                        group,
-                        f"{color}{delta:.4f}{reset}",
-                        f"{color}{lower_ci:.4f}{reset}",
-                        f"{color}{upper_ci:.4f}{reset}"
-                    ])
-    results.sort(key=lambda row: (row[0], row[1], row[2]))
-    if results:
+                    row = [model, category, group,
+                           f"{color}{delta:.4f}{reset}",
+                           f"{color}{lower_ci:.4f}{reset}",
+                           f"{color}{upper_ci:.4f}{reset}"]
+                    filtered.append(row)
+                else:
+                    row = [model, category, group,
+                           f"{delta:.4f}",
+                           f"{lower_ci:.4f}",
+                           f"{upper_ci:.4f}"]
+                all_deltas.append(row)
+
+    all_deltas.sort(key=lambda row: (row[0], row[1], row[2]))
+    filtered.sort(key=lambda row: (row[0], row[1], row[2]))
+
+    headers = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
+
+    print("All Delta Kappa Values:")
+    print(tabulate(all_deltas, headers=headers, tablefmt=tablefmt))
+    print("\n")
+
+    if filtered:
         print("Delta Kappa values with 95% CI excluding zero:")
-        headers = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
-        table_str = tabulate(results, headers=headers, tablefmt=tablefmt)
-        if tablefmt == 'html':
-            table_str = table_str.replace(maroon, "<span style='color: rgb(128, 0, 0)'>")
-            table_str = table_str.replace(green, "<span style='color: rgb(0, 128, 0)'>")
-            table_str = table_str.replace(reset, "</span>")
-        print(table_str)
+        print(tabulate(filtered, headers=headers, tablefmt=tablefmt))
     else:
-        print("No model/group combinations with a CI excluding zero.")
+        print("No model/group combinations meeting the specified criteria for Delta Kappa.")
+

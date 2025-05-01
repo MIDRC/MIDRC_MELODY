@@ -6,6 +6,8 @@ try:
     from melody_gui import launch_gui
     gui_available = True
 except ImportError:
+    def launch_gui():
+        print("GUI module not available. Please install the GUI package to use this feature.")
     gui_available = False
 
 def main():
