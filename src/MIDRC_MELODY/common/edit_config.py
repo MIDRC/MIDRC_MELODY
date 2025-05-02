@@ -71,7 +71,7 @@ def _handle_scroll(key, pad):
     return key
 
 
-class ConfigEditor:
+class ConsoleTextEditor:
     def __init__(self, stdscr, original, path):
         self.stdscr = stdscr
         self.original = original
@@ -145,7 +145,7 @@ class ConfigEditor:
 
 
 def _run_editor(stdscr, original, path):
-    editor = ConfigEditor(stdscr, original, path)
+    editor = ConsoleTextEditor(stdscr, original, path)
     editor.run()
 
 
