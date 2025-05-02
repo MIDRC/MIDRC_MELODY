@@ -1,6 +1,6 @@
 from PySide6.QtGui import QAction, QIcon, QBrush, QColor, QTextCursor, QFontDatabase, QFont
 from PySide6.QtWidgets import QMainWindow, QMenuBar, QToolBar, QTabWidget, QMessageBox, QWidget, QSizePolicy, QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QLabel, QCheckBox, QHBoxLayout, QTableWidget, QTableWidgetItem, QDoubleSpinBox, QSpinBox, QPlainTextEdit
-from PySide6.QtCore import Slot, QSettings, QRunnable, QThreadPool, QObject, Signal
+from PySide6.QtCore import Slot, QSettings, QRunnable, QThreadPool, QObject, Signal, Qt
 import yaml
 import os
 import json
@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         self._createToolBar()
         self._createCentralWidget()
         self.progress_view = None  # Will hold a QPlainTextEdit for live progress
+        self._ansi = None  # Will hold the ANSIProcessor for live progress
 
     def _createMenuBar(self):
         menu_bar = self.menuBar()
@@ -170,6 +171,7 @@ class MainWindow(QMainWindow):
         """Replace the central widget with a progress view to display live console output."""
         self.progress_view = QPlainTextEdit()
         self.progress_view.setReadOnly(True)
+        self._ansi = ANSIProcessor(self.progress_view)
 
         fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)  # platform-native mono
         fixed.setPointSize(10)  # pick a size you like
@@ -194,15 +196,15 @@ class MainWindow(QMainWindow):
         self.progress_view.ensureCursorVisible()
 
     def compute_qwk(self, config: dict):
-        # Create an EmittingStream and connect its textWritten signal directly to append_progress.
+        # Create an EmittingStream and connect its textWritten signal.
         stream = EmittingStream()
-        stream.textWritten.connect(self.append_progress)
-        # Process inside redirect_stdout so that progress is sent live.
-        with ExitStack() as es:  # capture both channels
+        stream.textWritten.connect(self.append_progress)  # using queued connection if needed
+        with ExitStack() as es:
             es.enter_context(redirect_stdout(stream))
             es.enter_context(redirect_stderr(stream))
-
+            # Build test data once.
             test_data = build_test_and_demographic_data(config)
+            # Calculate delta kappas for subgroup comparisons.
             delta_kappas = calculate_delta_kappa(test_data)
             all_rows = []
             filtered_rows = []
@@ -217,17 +219,41 @@ class MainWindow(QMainWindow):
                         all_rows.append((row, color))
                         if qualifies:
                             filtered_rows.append((row, color))
-        # Return only the table rows now (progress was handled live)
-        return (all_rows, filtered_rows)
+            # Additionally, calculate overall kappas and intervals.
+            kappas, intervals = calculate_kappas_and_intervals(test_data)
+            kappas_rows = []
+            for model in sorted(kappas.keys()):
+                row = [model, f"{kappas[model]:.4f}", f"{intervals[model][0]:.4f}", f"{intervals[model][1]:.4f}"]
+                kappas_rows.append((row, None))
+        # Return a triple containing delta values tables and kappas table.
+        return (all_rows, filtered_rows, kappas_rows)
+
+    def update_qwk_tables(self, result):
+        # Unpack the results from compute_qwk().
+        delta_all, delta_filtered, kappas_rows = result
+        # Create table widgets for delta kappas.
+        headers_delta = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
+        table_all = self.create_table_widget(headers_delta, delta_all)
+        table_filtered = self.create_table_widget(headers_delta, delta_filtered)
+        # Create table widget for overall kappas and intervals.
+        headers_kappas = ["Model", "Kappa", "Lower CI", "Upper CI"]
+        table_kappas = self.create_table_widget(headers_kappas, kappas_rows)
+        # Prepare a tab widget with three tabs for delta tables and one for kappas.
+        result_tabs = QTabWidget()
+        result_tabs.addTab(table_kappas, "Kappas & Intervals")
+        result_tabs.addTab(table_all, "All Delta κ Values")
+        result_tabs.addTab(table_filtered, "Filtered (CI Excludes Zero)")
+        # Retain progress output tab.
+        result_tabs.addTab(self.progress_view, "Progress Output")
+        self.setCentralWidget(result_tabs)
 
     def compute_eod_aaod(self, config: dict):
-        # Create an EmittingStream and connect its textWritten signal directly to append_progress.
+        # Create an EmittingStream and connect its textWritten signal using a queued connection.
         stream = EmittingStream()
-        stream.textWritten.connect(self.append_progress)
-        with ExitStack() as es:  # capture both channels
+        stream.textWritten.connect(self.append_progress)  # UPDATED
+        with ExitStack() as es:
             es.enter_context(redirect_stdout(stream))
             es.enter_context(redirect_stderr(stream))
-
             t_data = build_demo_data(config)
             threshold = config['binary threshold']
             matched_df = binarize_scores(t_data.matched_df, t_data.truth_col, t_data.test_cols, threshold=threshold)
@@ -268,6 +294,8 @@ class MainWindow(QMainWindow):
         result_tabs = QTabWidget()
         result_tabs.addTab(table_all, "All EOD/AAOD Values")
         result_tabs.addTab(table_filtered, "Filtered (CI excludes zero)")
+        # Retain the progress output tab.
+        result_tabs.addTab(self.progress_view, "Progress Output")
         self.setCentralWidget(result_tabs)
 
     @Slot()
@@ -282,17 +310,6 @@ class MainWindow(QMainWindow):
             self.threadpool.start(worker)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error in QWK Metrics: {e}")
-
-    def update_qwk_tables(self, result):
-        # Worker finished; update central widget with result tables.
-        all_rows, filtered_rows = result
-        headers = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
-        table_all = self.create_table_widget(headers, all_rows)
-        table_filtered = self.create_table_widget(headers, filtered_rows)
-        result_tabs = QTabWidget()
-        result_tabs.addTab(table_all, "All Delta Kappa Values")
-        result_tabs.addTab(table_filtered, "Filtered (CI excludes zero)")
-        self.setCentralWidget(result_tabs)
 
     @Slot()
     def display_charts(self):
@@ -456,3 +473,4 @@ class ConfigEditor(QDialog):
     def on_save(self):
         self.apply_changes()
         self.accept()
+

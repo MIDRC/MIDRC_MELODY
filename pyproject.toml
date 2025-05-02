@@ -20,7 +20,8 @@ gui = [
 
 [project.scripts]
 melody = "melody:main"
-gui-melody = "gui_melody:main"
+melody-gui = "melody_gui:main"
+melody_gui = "melody_gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

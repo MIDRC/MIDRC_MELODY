@@ -5,7 +5,7 @@ from contextlib import ExitStack, redirect_stdout, redirect_stderr
 from pathlib import Path
 from typing import Optional, Match
 
-from PySide6.QtCore import Slot, QSettings, QRunnable, QThreadPool, QObject, Signal
+from PySide6.QtCore import Slot, QSettings, QRunnable, QThreadPool, QObject, Signal, QCoreApplication
 from PySide6.QtGui import QTextCursor, QFontDatabase, QFont
 from PySide6.QtWidgets import QPlainTextEdit
 
@@ -81,6 +81,8 @@ class ANSIProcessor:
 
         self.console.setTextCursor(cursor)
         self.console.ensureCursorVisible()
+        # Force UI update so progress is visible in real-time.
+        QCoreApplication.processEvents()
 
 # New: Worker signals and Worker class for threaded processing
 class WorkerSignals(QObject):
@@ -104,3 +106,4 @@ class Worker(QRunnable):
             self.signals.result.emit(result)
         finally:
             self.signals.finished.emit()
+
