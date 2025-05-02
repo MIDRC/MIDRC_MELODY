@@ -1,12 +1,13 @@
+from __future__ import annotations
 import os
 import sys
 import re
 from contextlib import ExitStack, redirect_stdout, redirect_stderr
 from pathlib import Path
-from typing import Optional, Match
+from typing import Optional, Match, Final
 
 from PySide6.QtCore import Slot, QSettings, QRunnable, QThreadPool, QObject, Signal, QCoreApplication
-from PySide6.QtGui import QTextCursor, QFontDatabase, QFont
+from PySide6.QtGui import QTextCursor, QFontDatabase, QFont, QTextCharFormat
 from PySide6.QtWidgets import QPlainTextEdit
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -30,59 +31,111 @@ class EmittingStream(QObject):
         return True
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Minimal ANSI interpreter
-# ──────────────────────────────────────────────────────────────────────────────
+"""ANSI‑aware redirect stream for QPlainTextEdit.
+
+    • Handles tqdm’s carriage‑return / cursor‑up logic so stacked bars overwrite
+      instead of appending.
+    • Skips the *newline that terminates the bar* while it is still in‑flight,
+      but lets the final newline through when the bar closes.
+"""
+__all__ = ["ANSIProcessor"]
+
+_CSI_RE = re.compile(r"\x1b\[(\d*)([A-Za-z])")          # already in your file
+
+def _next_csi_is_cursor_up(buf: str, pos: int) -> bool:
+    """Return True when buf[pos:] starts with ESC[…A (cursor‑up)."""
+    if pos >= len(buf) or buf[pos] != "\x1b":
+        return False
+    m = _CSI_RE.match(buf, pos)
+    return bool(m and m.group(2) == "A")
+
+
 class ANSIProcessor:
-    """Handle just the escape sequences tqdm uses for stacked progress‑bars."""
+    @staticmethod
+    def process(console: QPlainTextEdit, chunk: str) -> None:
+        # one persistent flag per widget
+        if not hasattr(console, "_nl_pending"):
+            console._nl_pending = False          # type: ignore[attr-defined]
 
-    ANSI_RE = re.compile(r"\x1b\[(?P<num>\d*?)(?P<cmd>[A-Za-z])")
+        cursor = console.textCursor()
+        i, n = 0, len(chunk)
 
-    def __init__(self, console: QPlainTextEdit) -> None:  # store widget ref
-        self.console = console
+        while i < n:
+            # ── commit any deferred newline *before* inspecting next byte
+            if console._nl_pending:
+                if not _next_csi_is_cursor_up(chunk, i):
+                    cursor.insertBlock()         # real newline
+                console._nl_pending = False
 
-    # ---------------------------------------------------------------------
-    # public API – feed new bytes; we update the widget in place
-    # ---------------------------------------------------------------------
-    def feed(self, chunk: str) -> None:  # noqa: C901 (single responsibility)
-        """Process *chunk* (plain + escape codes) and mutate *console*."""
-
-        cursor = self.console.textCursor()
-        i = 0
-        while i < len(chunk):
             ch = chunk[i]
 
-            # (1) Carriage return – rewrite current line
+            # ── carriage return  → clear line
             if ch == "\r":
-                cursor.movePosition(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
+                cursor.movePosition(QTextCursor.StartOfLine)
+                cursor.select(QTextCursor.LineUnderCursor)
                 cursor.removeSelectedText()
                 i += 1
                 continue
 
-            # (2) Escape sequence
+            # ── line‑feed  → decide later
+            if ch == "\n":
+                # Try to step to the next existing row; if we’re already on
+                # the last row of the document, create a new one once.
+                if not cursor.movePosition(QTextCursor.Down):
+                    cursor.insertBlock()  # adds a row only if needed
+                cursor.movePosition(QTextCursor.StartOfLine)  # like real terminal ▼
+                i += 1
+                continue
+
+            # ── CSI escape sequences
             if ch == "\x1b":
-                match: Optional[Match[str]] = self.ANSI_RE.match(chunk, i)
-                if match:
-                    cmd = match["cmd"]
-                    num = int(match["num"] or 1)
-                    if cmd == "A":  # cursor up *num* lines
+                m = _CSI_RE.match(chunk, i)
+                if m:
+                    num = int(m.group(1) or 1)
+                    cmd = m.group(2)
+
+                    if cmd == "A":              # cursor‑up
                         for _ in range(num):
                             cursor.movePosition(QTextCursor.Up)
-                        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
-                    elif cmd == "K" and num in {0, 1, 2}:  # ESC[2K – clear line
-                        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.KeepAnchor)
+                        cursor.movePosition(QTextCursor.StartOfLine)
+                        i = m.end()
+                        continue
+
+                    if cmd == "K":              # erase line
+                        cursor.select(QTextCursor.LineUnderCursor)
                         cursor.removeSelectedText()
-                    # ignore other cmds – strip them silently
-                    i = match.end()
-                    continue
-            # (3) Normal character – insert and advance
+                        cursor.movePosition(QTextCursor.StartOfLine)
+                        i = m.end()
+                        continue
+
+                    if cmd == "m":  # bold / reset / colours …
+                        # keep a per‑widget flag so style persists across chunks
+                        if not hasattr(console, "_ansi_fmt"):
+                            console._ansi_fmt = QTextCharFormat()  # type: ignore[attr-defined]
+
+                        # SGR can have multiple semicolon‑separated params
+                        for p in (m.group(1) or "0").split(";"):
+                            p = p or "0"
+                            if p == "0":  # reset all
+                                console._ansi_fmt = QTextCharFormat()
+                            elif p == "1":  # bold on
+                                console._ansi_fmt.setFontWeight(QFont.Bold)
+                            elif p == "22":  # normal intensity
+                                console._ansi_fmt.setFontWeight(QFont.Normal)
+                            # you can extend here for colours (30–37 / 90–97, etc.)
+
+                        cursor.setCharFormat(console._ansi_fmt)
+                        i = m.end()
+                        continue
+                # any other ESC sequence is ignored
+
+            # ── printable character
             cursor.insertText(ch)
             i += 1
 
-        self.console.setTextCursor(cursor)
-        self.console.ensureCursorVisible()
-        # Force UI update so progress is visible in real-time.
-        QCoreApplication.processEvents()
+        console.setTextCursor(cursor)
+        console.ensureCursorVisible()
+
 
 # New: Worker signals and Worker class for threaded processing
 class WorkerSignals(QObject):

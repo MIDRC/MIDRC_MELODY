@@ -28,6 +28,7 @@ class NumericSortTableWidgetItem(QTableWidgetItem):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.resize(1200, 600)  # Set default size to 800x600
         self.setWindowTitle("Melody GUI")
         self.threadpool = QThreadPool()   # New thread pool for background work
         self._createMenuBar()
@@ -171,29 +172,19 @@ class MainWindow(QMainWindow):
         """Replace the central widget with a progress view to display live console output."""
         self.progress_view = QPlainTextEdit()
         self.progress_view.setReadOnly(True)
-        self._ansi = ANSIProcessor(self.progress_view)
-
         fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)  # platform-native mono
         fixed.setPointSize(10)  # pick a size you like
         self.progress_view.setFont(fixed)
-
-        # optional: keep long tqdm lines readable
         self.progress_view.setLineWrapMode(QPlainTextEdit.NoWrap)
-
+        # No longer instantiate ANSIProcessor; we'll use its static function instead.
         progress_tabs = QTabWidget()
         progress_tabs.addTab(self.progress_view, "Progress Output")
         self.setCentralWidget(progress_tabs)
 
     def append_progress(self, text: str) -> None:
-        cursor = self.progress_view.textCursor()  # QPlainTextEdit
-        if text.startswith('\r'):
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.KeepAnchor)
-            cursor.removeSelectedText()  # delete the old line
-            text = text.lstrip('\r')  # write fresh line below
-        cursor.insertText(text)
-        self.progress_view.setTextCursor(cursor)
-        self.progress_view.ensureCursorVisible()
+        # Use ANSIProcessor.process() as a static function to update the progress_view.
+        from gui.tqdm_handler import ANSIProcessor  # Ensure we reference the updated static function
+        ANSIProcessor.process(self.progress_view, text)
 
     def compute_qwk(self, config: dict):
         # Create an EmittingStream and connect its textWritten signal.
