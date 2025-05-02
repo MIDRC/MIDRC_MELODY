@@ -12,17 +12,16 @@ import pandas as pd
 from common.data_preprocessing import bin_dataframe_column
 
 
-def check_file_exists(file_path: str, key_name: str, config_file: str) -> None:
+def check_file_exists(file_path: str, key_name: str) -> None:
     """
     Check if a file exists and exit gracefully with an error message if it doesn't.
 
     :arg file_path: Path to the file to check.
     :arg key_name: Key name in the configuration file.
-    :arg config_file: Name of the configuration file.
     """
     if not Path(file_path).exists():
         print(f"Error: The file specified for '{key_name}' ('{file_path}') does not exist.")
-        print(f"Please update the '{key_name}' path in the '{config_file}' file to point to a valid file.")
+        print(f"Please update the '{key_name}' path in the config file to point to a valid file.")
         print("Ensure the path is correct and accessible.")
         sys.exit(1)
 
@@ -40,8 +39,8 @@ def create_matched_df_from_files(input_data: dict, numeric_cols_dict: dict) -> T
     test_scores_file = input_data['test scores']
 
     # Check if files exist
-    check_file_exists(truth_file, 'truth file', '../../config.yaml')
-    check_file_exists(test_scores_file, 'test scores', '../../config.yaml')
+    check_file_exists(truth_file, 'truth file')
+    check_file_exists(test_scores_file, 'test scores')
 
     # Read the truth and test scores files
     df_truth = pd.read_csv(truth_file)
