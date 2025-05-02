@@ -8,3 +8,4 @@ joblib>=1.0.0
 tqdm>=4.0.0
 tabulate>=0.8.9
 tqdm-joblib>=0.0.4
+windows-curses; sys_platform == 'win32'
