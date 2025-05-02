@@ -1,12 +1,29 @@
 """This script generates EOD and AAOD spider plots for multiple models across different categories."""
 from dataclasses import replace
 
-import yaml
-import matplotlib.pyplot as plt
+#  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
+#
+#      Licensed under the Apache License, Version 2.0 (the "License");
+#      you may not use this file except in compliance with the License.
+#      You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#      Unless required by applicable law or agreed to in writing, software
+#      distributed under the License is distributed on an "AS IS" BASIS,
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#      See the License for the specific language governing permissions and
+#      limitations under the License.
+#
 
-from common.data_loading import build_test_and_demographic_data, save_pickled_data
-from common.eod_aaod_metrics import binarize_scores, calculate_eod_aaod, generate_plot_data_eod_aaod, plot_data_eod_aaod, print_table_of_nonzero_eod_aaod
-from common.plot_tools import SpiderPlotData
+import matplotlib.pyplot as plt
+import yaml
+
+from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data, save_pickled_data
+from MIDRC_MELODY.common.eod_aaod_metrics import (binarize_scores, calculate_eod_aaod, generate_plot_data_eod_aaod,
+                                                  plot_data_eod_aaod, print_table_of_nonzero_eod_aaod)
+from MIDRC_MELODY.common.plot_tools import SpiderPlotData
+
 
 def generate_eod_aaod_spiders(cfg_path: str = "config.yaml"):
     # Load configuration
@@ -36,13 +53,14 @@ def generate_eod_aaod_spiders(cfg_path: str = "config.yaml"):
         save_pickled_data(config['output'], metric, plot_data_dict[metric])
 
     base_plot_data = SpiderPlotData(ylim_min=global_min, ylim_max=global_max, plot_config=config['plot'])
-    figures_dict = plot_data_eod_aaod(plot_data_dict,
+    figures_dict = plot_data_eod_aaod(plot_data_dict,                    # noqa: F841
                                       test_data.test_cols,
                                       metrics=metrics,
                                       base_plot_data=base_plot_data,
                                       )
 
     plt.show()
+
 
 if __name__ == '__main__':
     generate_eod_aaod_spiders()

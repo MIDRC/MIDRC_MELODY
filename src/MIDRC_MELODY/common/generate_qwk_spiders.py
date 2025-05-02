@@ -1,9 +1,26 @@
+#  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
+#
+#      Licensed under the Apache License, Version 2.0 (the "License");
+#      you may not use this file except in compliance with the License.
+#      You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#      Unless required by applicable law or agreed to in writing, software
+#      distributed under the License is distributed on an "AS IS" BASIS,
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#      See the License for the specific language governing permissions and
+#      limitations under the License.
+#
+
 """This script generates QWK spider plots for multiple models across different categories."""
+
 import yaml
 
-from common.data_loading import build_test_and_demographic_data, save_pickled_data
-from common.qwk_metrics import (calculate_kappas_and_intervals, calculate_delta_kappa, generate_plots_from_delta_kappas,
-                         print_table_of_nonzero_deltas)
+from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data, save_pickled_data
+from MIDRC_MELODY.common.qwk_metrics import (calculate_delta_kappa, calculate_kappas_and_intervals,
+                                             generate_plots_from_delta_kappas, print_table_of_nonzero_deltas)
+
 
 def generate_qwk_spiders(cfg_path: str = "config.yaml"):
     # Load configuration
@@ -28,6 +45,7 @@ def generate_qwk_spiders(cfg_path: str = "config.yaml"):
 
     # Generate and save plots
     generate_plots_from_delta_kappas(delta_kappas, test_data.test_cols, plot_config=config['plot'])
+
 
 if __name__ == '__main__':
     generate_qwk_spiders()

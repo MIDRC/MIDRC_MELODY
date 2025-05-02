@@ -1,3 +1,5 @@
+#  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
+
 input data:
   truth file: data/demo_truthNdemographics.csv
   test scores: data/demo_scores.csv

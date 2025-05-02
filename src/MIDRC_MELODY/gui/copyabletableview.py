@@ -23,7 +23,7 @@ from typing import List
 
 from PySide6.QtCore import QDate, QEvent, QObject, Qt
 from PySide6.QtGui import QGuiApplication, QKeySequence
-from PySide6.QtWidgets import QTableWidget, QMenu
+from PySide6.QtWidgets import QMenu, QTableWidget
 
 
 class CopyableTableWidget(QTableWidget):

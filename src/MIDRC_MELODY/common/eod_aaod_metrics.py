@@ -1,16 +1,31 @@
+#  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
+#
+#      Licensed under the Apache License, Version 2.0 (the "License");
+#      you may not use this file except in compliance with the License.
+#      You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#      Unless required by applicable law or agreed to in writing, software
+#      distributed under the License is distributed on an "AS IS" BASIS,
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#      See the License for the specific language governing permissions and
+#      limitations under the License.
+#
+
 """ EOD and AAOD metric calculation and plotting functions. """
 
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+from joblib import delayed, Parallel
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from sklearn.utils import resample
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
-from common.data_loading import TestAndDemographicData, check_required_columns
-from common.plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
+from MIDRC_MELODY.common.data_loading import check_required_columns, TestAndDemographicData
+from MIDRC_MELODY.common.plot_tools import display_figures_grid, plot_spider_chart, SpiderPlotData
 
 
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4
@@ -253,7 +268,7 @@ def plot_data_eod_aaod(
     return figures_dict
 
 
-def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Tuple[float, Tuple[float, float]]]]]],
+def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Tuple[float, Tuple[float, float]]]]]],  # noqa: E501
                                     tablefmt: str = "grid") -> None:
     """
     Print three tables:
@@ -262,7 +277,7 @@ def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict
       3. Filtered EOD/AAOD median values meeting criteria:
          - EOD: median > 0.1 or < -0.1.
          - AAOD: median > 0.1.
-         
+
     :arg eod_aaod: Dictionary of EOD and AAOD values per category and model.
     :arg tablefmt: Format for tabulate.
     """
@@ -275,7 +290,7 @@ def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict
     all_eod = []
     all_aaod = []
     filtered = []
-    
+
     for category, model_data in eod_aaod.items():
         for model, groups in model_data.items():
             for group, metrics in groups.items():
@@ -311,23 +326,23 @@ def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict
                             f"{color}{ci_lower:.4f}{reset}",
                             f"{color}{ci_upper:.4f}{reset}"
                         ])
-    
+
     # Sort the tables
     all_eod.sort(key=lambda row: (row[0], row[1], row[2]))
     all_aaod.sort(key=lambda row: (row[0], row[1], row[2]))
     filtered.sort(key=lambda row: (row[0], row[1], row[2], row[3]))
-    
+
     # Print All EOD table
     headers_all = ["Model", "Category", "Group", "Median", "Lower CI", "Upper CI"]
     print("All EOD median values:")
     print(tabulate(all_eod, headers=headers_all, tablefmt=tablefmt))
     print("\n")
-    
+
     # Print All AAOD table
     print("All AAOD median values:")
     print(tabulate(all_aaod, headers_all, tablefmt=tablefmt))
     print("\n")
-    
+
     # Print Filtered table
     headers_filtered = ["Model", "Category", "Group", "Metric", "Median", "Lower CI", "Upper CI"]
     if filtered:
@@ -335,4 +350,3 @@ def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict
         print(tabulate(filtered, headers=headers_filtered, tablefmt=tablefmt))
     else:
         print("No model/group combinations meeting the specified criteria for EOD/AAOD.")
-        

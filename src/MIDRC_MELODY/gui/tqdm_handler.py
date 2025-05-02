@@ -1,14 +1,28 @@
-from __future__ import annotations
-import os
-import sys
-import re
-from contextlib import ExitStack, redirect_stdout, redirect_stderr
-from pathlib import Path
-from typing import Optional, Match, Final
+#  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
+#
+#      Licensed under the Apache License, Version 2.0 (the "License");
+#      you may not use this file except in compliance with the License.
+#      You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#      Unless required by applicable law or agreed to in writing, software
+#      distributed under the License is distributed on an "AS IS" BASIS,
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#      See the License for the specific language governing permissions and
+#      limitations under the License.
+#
 
-from PySide6.QtCore import Slot, QSettings, QRunnable, QThreadPool, QObject, Signal, QCoreApplication
-from PySide6.QtGui import QTextCursor, QFontDatabase, QFont, QTextCharFormat
+import re
+from typing import Final
+
+from PySide6.QtCore import QObject, QRunnable, Signal
+from PySide6.QtGui import QFont, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import QPlainTextEdit
+
+
+__all__ = ["ANSIProcessor", "EmittingStream", "Worker"]
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # tqdm‑to‑Qt bridge
@@ -38,9 +52,9 @@ class EmittingStream(QObject):
     • Skips the *newline that terminates the bar* while it is still in‑flight,
       but lets the final newline through when the bar closes.
 """
-__all__ = ["ANSIProcessor"]
 
-_CSI_RE : Final = re.compile(r"\x1b\[(\d*)([A-Za-z])")
+_CSI_RE: Final = re.compile(r"\x1b\[(\d*)([A-Za-z])")
+
 
 def _next_csi_is_cursor_up(buf: str, pos: int) -> bool:
     """Return True when buf[pos:] starts with ESC[…A (cursor‑up)."""
@@ -143,6 +157,7 @@ class WorkerSignals(QObject):
     error = Signal(str)
     result = Signal(object)
 
+
 class Worker(QRunnable):
     def __init__(self, fn, *args, **kwargs):
         super().__init__()
@@ -150,6 +165,7 @@ class Worker(QRunnable):
         self.args = args
         self.kwargs = kwargs
         self.signals = WorkerSignals()
+
     def run(self):
         try:
             result = self.fn(*self.args, **self.kwargs)
@@ -159,4 +175,3 @@ class Worker(QRunnable):
             self.signals.result.emit(result)
         finally:
             self.signals.finished.emit()
-

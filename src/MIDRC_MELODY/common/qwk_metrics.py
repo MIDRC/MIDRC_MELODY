@@ -1,8 +1,24 @@
-""" Module for calculating quadratic weighted kappa and delta kappa values with confidence intervals. """
-from dataclasses import replace
-from typing import List, Dict, Tuple, Any, Optional
+#  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
+#
+#      Licensed under the Apache License, Version 2.0 (the "License");
+#      you may not use this file except in compliance with the License.
+#      You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#      Unless required by applicable law or agreed to in writing, software
+#      distributed under the License is distributed on an "AS IS" BASIS,
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#      See the License for the specific language governing permissions and
+#      limitations under the License.
+#
 
-from joblib import Parallel, delayed
+""" Module for calculating quadratic weighted kappa and delta kappa values with confidence intervals. """
+
+from dataclasses import replace
+from typing import Any, Dict, List, Optional, Tuple
+
+from joblib import delayed, Parallel
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -12,8 +28,8 @@ from tabulate import tabulate
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
-from common.data_loading import TestAndDemographicData
-from common.plot_tools import plot_spider_chart, display_figures_grid, SpiderPlotData
+from MIDRC_MELODY.common.data_loading import TestAndDemographicData
+from MIDRC_MELODY.common.plot_tools import display_figures_grid, plot_spider_chart, SpiderPlotData
 
 
 def calculate_kappas_and_intervals(
@@ -217,7 +233,6 @@ def print_table_of_nonzero_deltas(delta_kappas: Dict[str, Dict[str, Dict[Any, Tu
     :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
     :arg tablefmt: Table format string for tabulate.
     """
-    from tabulate import tabulate
     # ANSI escape codes for maroon and green using 24-bit RGB colors
     maroon = "\033[38;2;128;0;0m"
     green = "\033[38;2;0;128;0m"
@@ -258,4 +273,3 @@ def print_table_of_nonzero_deltas(delta_kappas: Dict[str, Dict[str, Dict[Any, Tu
         print(tabulate(filtered, headers=headers, tablefmt=tablefmt))
     else:
         print("No model/group combinations meeting the specified criteria for Delta Kappa.")
-
