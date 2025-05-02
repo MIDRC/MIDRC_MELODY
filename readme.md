@@ -17,7 +17,7 @@ The tool supports two types of evaluation:
     weighted kappa (QWK)** metric.
 - **Binary Decision Task Evaluation**:
   - Converts scores into binary decisions based on a threshold.
-  - Computes EOD and AAOD metrics using bootstrapping across various groups.
+  - Computes **Equal Opportunity Difference (EOD)** and **Average Absolute Odds Difference (AAOD)** metrics using bootstrapping across various groups.
 - Generates spider plots comparing these metrics.
 - Saves the generated data for further analysis.
 

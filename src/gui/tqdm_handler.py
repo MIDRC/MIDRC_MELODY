@@ -40,7 +40,7 @@ class EmittingStream(QObject):
 """
 __all__ = ["ANSIProcessor"]
 
-_CSI_RE = re.compile(r"\x1b\[(\d*)([A-Za-z])")          # already in your file
+_CSI_RE : Final = re.compile(r"\x1b\[(\d*)([A-Za-z])")
 
 def _next_csi_is_cursor_up(buf: str, pos: int) -> bool:
     """Return True when buf[pos:] starts with ESC[…A (cursor‑up)."""
