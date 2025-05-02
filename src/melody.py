@@ -25,6 +25,7 @@ try:
 except ImportError:
     GUI_AVAILABLE = False
 
+
 def show_config(path):
     """Print out the YAML config file at `path`."""
     try:
@@ -32,14 +33,17 @@ def show_config(path):
     except Exception as e:
         print(f"Error reading config: {e}")
 
+
 def set_config(current_path):
     """Prompt for a new path and return it (or the old one)."""
     new = input(f"Enter new config path [{current_path}]: ").strip()
     return new or current_path
 
+
 def quit_program(_=None):
     print("Goodbye!")
     sys.exit(0)
+
 
 def main():
     # wrap your mutable state in a dict
@@ -75,6 +79,7 @@ def main():
         # call the handler
         _, handler = action
         handler()
+
 
 if __name__ == "__main__":
     main()
