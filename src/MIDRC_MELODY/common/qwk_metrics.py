@@ -203,11 +203,12 @@ def generate_plots_from_delta_kappas(
     global_max = max(all_upper) + 0.05
 
     figures = []
+    metric = "QWK"
     base_plot_data = SpiderPlotData(
-        ylim_min=global_min,
-        ylim_max=global_max,
+        ylim_min={metric: global_min},
+        ylim_max={metric: global_max},
         plot_config=plot_config,
-        metric="QWK",
+        metric=metric,
     )
     for model in ai_models:
         # Create a new copy based on the base instance

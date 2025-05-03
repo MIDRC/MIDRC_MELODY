@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from joblib import delayed, Parallel
 import numpy as np
 import pandas as pd
+from scipy.special import obl_rad1
 from sklearn.utils import resample
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
@@ -208,7 +209,7 @@ def generate_plot_data_eod_aaod(
     eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]],
     test_cols: List[str],
     metrics: List[str] = ('eod', 'aaod')
-) -> Tuple[Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]], float, float]:
+) -> Tuple[Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]], Dict[str, float], Dict[str, float]]:
     """
     Generate plot data for each metric and compute global axis limits.
 
@@ -219,16 +220,19 @@ def generate_plot_data_eod_aaod(
     :returns: Tuple of plot data dictionary, global minimum and maximum values.
     """
     plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]] = {}
-    all_values: List[float] = []
+    global_min = {}
+    global_max = {}
 
     for metric in metrics:
+        all_values: List[float] = []
         plot_data_dict[metric] = {}
         for model in test_cols:
             groups, values, lower, upper = extract_plot_data_eod_aaod(eod_aaod, model, metric)
             plot_data_dict[metric][model] = (groups, values, lower, upper)
             all_values.extend(lower + upper)
 
-    global_min, global_max = min(all_values) - 0.05, max(all_values) + 0.05
+        global_min[metric], global_max[metric] = min(all_values) - 0.05, max(all_values) + 0.05
+
     return plot_data_dict, global_min, global_max
 
 
@@ -285,6 +289,7 @@ def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict
     # ANSI color codes
     maroon = "\033[38;2;128;0;0m"
     green = "\033[38;2;0;128;0m"
+    orange = "\033[38;2;255;165;0m"
     reset = "\033[0m"
 
     all_eod = []
@@ -304,7 +309,7 @@ def print_table_of_nonzero_eod_aaod(eod_aaod: Dict[str, Dict[str, Dict[Any, Dict
                         color = maroon if median_val < 0 else green
                     elif metric == 'aaod':
                         qualifies = (median_val > 0.1)
-                        color = green
+                        color = orange
                     # Format values for "all" tables: color only if criteria met, else plain.
                     median_str = f"{color}{median_val:.4f}{reset}" if qualifies else f"{median_val:.4f}"
                     lower_str = f"{color}{ci_lower:.4f}{reset}" if qualifies else f"{ci_lower:.4f}"
