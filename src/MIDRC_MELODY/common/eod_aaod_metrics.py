@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from joblib import delayed, Parallel
 import numpy as np
 import pandas as pd
-from scipy.special import obl_rad1
 from sklearn.utils import resample
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
@@ -209,7 +208,8 @@ def generate_plot_data_eod_aaod(
     eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Any]]]],
     test_cols: List[str],
     metrics: List[str] = ('eod', 'aaod')
-) -> Tuple[Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]], Dict[str, float], Dict[str, float]]:
+) -> Tuple[Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]],
+           Dict[str, float], Dict[str, float]]:
     """
     Generate plot data for each metric and compute global axis limits.
 

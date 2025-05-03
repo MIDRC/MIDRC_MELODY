@@ -171,54 +171,72 @@ def _apply_metric_overlay(
     upper_bounds: List[float],
 ) -> None:
     metric = metric.upper()
-    theta_full = np.linspace(0, 2 * np.pi, 100)
-    if metric == 'QWK':
-        baseline_circle = np.full_like(theta_full, 0)
-        ax.plot(theta_full, baseline_circle, color='seagreen', linestyle='--', linewidth=3, alpha=0.8)
-        # Highlight any axis where the lower bound is above zero or upper bound below zero
-        for i, label in enumerate(ax.get_xticklabels() [:-1]):
+    full_theta = _get_full_theta()
+    overlay_config = {
+        'QWK': {
+            'baseline': {'type': 'line', 'y': 0, 'style': '--', 'color': 'seagreen', 'linewidth': 3, 'alpha': 0.8},
+            'thresholds': [
+                (lower_bounds, lambda v: v > 0, 'maroon'),
+                (upper_bounds, lambda v: v < 0, 'red'),
+            ],
+        },
+        'EOD': {
+            'fill': {'lo': -0.1, 'hi': 0.1, 'color': 'lightgreen', 'alpha': 0.5},
+            'thresholds': [
+                (values, lambda v: v > 0.1, 'maroon'),
+                (values, lambda v: v < -0.1, 'red'),
+            ],
+        },
+        'AAOD': {
+            'fill': {'lo': 0, 'hi': 0.1, 'color': 'lightgreen', 'alpha': 0.5},
+            'baseline': {'type': 'ylim', 'lo': 0},
+            'thresholds': [
+                (values, lambda v: v > 0.1, 'maroon'),
+            ],
+        },
+    }
+    cfg = overlay_config.get(metric)
+    if not cfg:
+        return
+
+    # Baseline rendering
+    if 'baseline' in cfg:
+        base = cfg['baseline']
+        if base['type'] == 'line':
+            ax.plot(full_theta, np.full_like(full_theta, base['y']), base['style'],
+                    linewidth=base['linewidth'], alpha=base['alpha'], color=base['color'])
+        elif base['type'] == 'ylim':
+            _, ymax = ax.get_ylim()
+            ax.set_ylim(base['lo'], ymax)
+
+    # Fill region if specified
+    if 'fill' in cfg:
+        f = cfg['fill']
+        ax.fill_between(full_theta, f['lo'], f['hi'], color=f['color'], alpha=f['alpha'])
+
+    # Annotate thresholds
+    for data, cond, color in cfg['thresholds']:
+        _annotate(ax, angles, data, cond, color)
+
+
+def _get_full_theta() -> np.ndarray:
+    return np.linspace(0, 2 * np.pi, 100)
+
+
+def _annotate(
+    ax: plt.Axes,
+    angles: List[float],
+    data: List[float],
+    condition: Any,
+    color: str,
+) -> None:
+    for i, label in enumerate(ax.get_xticklabels()[:-1]):
+        if condition(data[i]):
             angle = angles[i]
             rot = 90 + np.degrees(angle)
-            # Positive effect: lower bound above zero
-            if lower_bounds[i] > 0:
-                label.set_fontweight('bold')
-                label.set_color('maroon')
-                ax.text(angle, lower_bounds[i], '—', rotation=rot, color='maroon',
-                        ha='center', va='center', fontsize=12)
-            # Negative effect: upper bound below zero
-            elif upper_bounds[i] < 0:
-                label.set_fontweight('bold')
-                label.set_color('red')
-                ax.text(angle, upper_bounds[i], '—', rotation=rot, color='red',
-                        ha='center', va='center', fontsize=12)
-    elif metric == 'EOD':
-        ax.fill_between(theta_full, -0.1, 0.1, color='lightgreen', alpha=0.5)
-        for i, label in enumerate(ax.get_xticklabels() [:-1]):
-            angle = angles[i]
-            rot = 90 + np.degrees(angle)
-            if values[i] > 0.1:
-                label.set_fontweight('bold')
-                label.set_color('maroon')
-                ax.text(angle, values[i], '—', rotation=rot, color='maroon',
-                        ha='center', va='center', fontsize=12)
-            elif values[i] < -0.1:
-                label.set_fontweight('bold')
-                label.set_color('red')
-                ax.text(angle, values[i], '—', rotation=rot, color='red',
-                        ha='center', va='center', fontsize=12)
-    elif metric == 'AAOD':
-        ax.fill_between(theta_full, 0, 0.1, color='lightgreen', alpha=0.5)
-        # enforce zero baseline for AAOD
-        _, ymax = ax.get_ylim()
-        ax.set_ylim(0, ymax)
-        for i, label in enumerate(ax.get_xticklabels() [:-1]):
-            angle = angles[i]
-            rot = 90 + np.degrees(angle)
-            if values[i] > 0.1:
-                label.set_fontweight('bold')
-                label.set_color('maroon')
-                ax.text(angle, values[i], '—', rotation=rot, color='maroon',
-                        ha='center', va='center', fontsize=12)
+            label.set_fontweight('bold')
+            label.set_color(color)
+            ax.text(angle, data[i], '—', rotation=rot, color=color, ha='center', va='center', fontsize=12)
 
 
 def _fill_bounds(
