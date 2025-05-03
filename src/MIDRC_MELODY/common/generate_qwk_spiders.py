@@ -15,11 +15,13 @@
 
 """This script generates QWK spider plots for multiple models across different categories."""
 
+import matplotlib.pyplot as plt
 import yaml
 
 from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data, save_pickled_data
 from MIDRC_MELODY.common.qwk_metrics import (calculate_delta_kappa, calculate_kappas_and_intervals,
-                                             generate_plots_from_delta_kappas, print_table_of_nonzero_deltas)
+                                             generate_plots_from_delta_kappas)
+from MIDRC_MELODY.common.table_tools import print_table_of_nonzero_deltas
 
 
 def generate_qwk_spiders(cfg_path: str = "config.yaml"):
@@ -45,6 +47,9 @@ def generate_qwk_spiders(cfg_path: str = "config.yaml"):
 
     # Generate and save plots
     generate_plots_from_delta_kappas(delta_kappas, test_data.test_cols, plot_config=config['plot'])
+
+    print("\nClose all figures to continue...", flush=True)
+    plt.show()
 
 
 if __name__ == '__main__':

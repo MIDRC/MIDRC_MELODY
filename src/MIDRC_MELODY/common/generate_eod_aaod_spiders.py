@@ -1,6 +1,3 @@
-"""This script generates EOD and AAOD spider plots for multiple models across different categories."""
-from dataclasses import replace
-
 #  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
 #
 #      Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,13 +13,17 @@ from dataclasses import replace
 #      limitations under the License.
 #
 
+"""This script generates EOD and AAOD spider plots for multiple models across different categories."""
+from dataclasses import replace
+
 import matplotlib.pyplot as plt
 import yaml
 
 from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data, save_pickled_data
 from MIDRC_MELODY.common.eod_aaod_metrics import (binarize_scores, calculate_eod_aaod, generate_plot_data_eod_aaod,
-                                                  plot_data_eod_aaod, print_table_of_nonzero_eod_aaod)
+                                                  plot_data_eod_aaod)
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
+from MIDRC_MELODY.common.table_tools import print_table_of_nonzero_eod_aaod
 
 
 def generate_eod_aaod_spiders(cfg_path: str = "config.yaml"):
@@ -59,6 +60,7 @@ def generate_eod_aaod_spiders(cfg_path: str = "config.yaml"):
                                       base_plot_data=base_plot_data,
                                       )
 
+    print("\nClose all figures to continue...", flush=True)
     plt.show()
 
 

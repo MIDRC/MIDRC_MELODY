@@ -24,7 +24,6 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import cohen_kappa_score
 from sklearn.utils import resample
-from tabulate import tabulate
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
@@ -220,57 +219,3 @@ def generate_plots_from_delta_kappas(
         figures.append(fig)
 
     display_figures_grid(figures)
-    plt.show()
-
-
-def print_table_of_nonzero_deltas(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
-                                  tablefmt: str = "grid") -> None:
-    """
-    Print two tables:
-      1. All delta kappa values.
-      2. Filtered delta kappas that have a 95% CI excluding zero.
-         Negative delta values are printed in maroon, positive in green.
-
-    :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
-    :arg tablefmt: Table format string for tabulate.
-    """
-    # ANSI escape codes for maroon and green using 24-bit RGB colors
-    maroon = "\033[38;2;128;0;0m"
-    green = "\033[38;2;0;128;0m"
-    reset = "\033[0m"
-
-    all_deltas = []
-    filtered = []
-
-    for category, model_data in delta_kappas.items():
-        for model, groups in model_data.items():
-            for group, (delta, (lower_ci, upper_ci)) in groups.items():
-                qualifies = (lower_ci > 0 or upper_ci < 0)
-                if qualifies:
-                    color = maroon if delta < 0 else green
-                    row = [model, category, group,
-                           f"{color}{delta:.4f}{reset}",
-                           f"{color}{lower_ci:.4f}{reset}",
-                           f"{color}{upper_ci:.4f}{reset}"]
-                    filtered.append(row)
-                else:
-                    row = [model, category, group,
-                           f"{delta:.4f}",
-                           f"{lower_ci:.4f}",
-                           f"{upper_ci:.4f}"]
-                all_deltas.append(row)
-
-    all_deltas.sort(key=lambda row: (row[0], row[1], row[2]))
-    filtered.sort(key=lambda row: (row[0], row[1], row[2]))
-
-    headers = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
-
-    print("All Delta Kappa Values:")
-    print(tabulate(all_deltas, headers=headers, tablefmt=tablefmt))
-    print("\n")
-
-    if filtered:
-        print("Delta Kappa values with 95% CI excluding zero:")
-        print(tabulate(filtered, headers=headers, tablefmt=tablefmt))
-    else:
-        print("No model/group combinations meeting the specified criteria for Delta Kappa.")
