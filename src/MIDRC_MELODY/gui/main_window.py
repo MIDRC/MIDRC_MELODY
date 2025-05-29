@@ -45,6 +45,11 @@ class NumericSortTableWidgetItem(QTableWidgetItem):
             return QTableWidgetItem.__lt__(self, other)
 
 
+def _sort_rows_gui(rows: list[tuple]) -> list[tuple]:
+    """Sort rows by Model, Category, Group, then Metric if present."""
+    return sorted(rows, key=lambda x: tuple(x[0][:4]))
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -315,19 +320,31 @@ class MainWindow(QMainWindow):
             from dataclasses import replace
             test_data = replace(t_data, matched_df=matched_df)
             eod_aaod = calculate_eod_aaod(test_data)
-            all_rows = []
-            filtered_rows = []
+            all_eod, all_aaod, filtered = [], [], []
             maroon = QColor(128, 0, 0)
             green = QColor(0, 128, 0)
-            for metric, groups in eod_aaod.items():
-                for group, (value, lower_ci, upper_ci) in groups.items():
-                    qualifies = (lower_ci > 0 or upper_ci < 0)
-                    color = green if qualifies and value >= 0 else (maroon if qualifies and value < 0 else None)
-                    row = [metric, group, f"{value:.4f}", f"{lower_ci:.4f}", f"{upper_ci:.4f}"]
-                    all_rows.append((row, color))
-                    if qualifies:
-                        filtered_rows.append((row, color))
-        return (all_rows, filtered_rows)
+            orange = QColor(255, 165, 0)
+            for category, model_data in eod_aaod.items():
+                for model, groups in model_data.items():
+                    for group, metrics in groups.items():
+                        for metric in ('eod', 'aaod'):
+                            median, (lower_ci, upper_ci) = metrics[metric]
+                            # Determine criteria and color
+                            if metric == 'eod':
+                                qualifies = abs(median) > 0.1
+                                color = maroon if median < 0 and qualifies else green if qualifies else None
+                                target_list = all_eod
+                            else:
+                                qualifies = median > 0.1
+                                color = orange if qualifies else None
+                                target_list = all_aaod
+                            row = [model, category, group, f"{median:.4f}", f"{lower_ci:.4f}", f"{upper_ci:.4f}"]
+                            target_list.append((row, color))
+                            if qualifies:
+                                row_f = row.copy()  # Copy the row to insert metric
+                                row_f.insert(3, metric.upper())
+                                filtered.append((row_f, color))
+        return _sort_rows_gui(all_eod), _sort_rows_gui(all_aaod), _sort_rows_gui(filtered)
 
     @Slot()
     def calculate_eod_aaod(self):
@@ -343,13 +360,16 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error in EOD/AAOD Metrics: {e}")
 
     def update_eod_aaod_tables(self, result):
-        all_rows, filtered_rows = result
-        headers = ["Metric", "Group", "Value", "Lower CI", "Upper CI"]
-        table_all = self.create_table_widget(headers, all_rows)
+        all_eod_rows, all_aaod_rows, filtered_rows = result
+        headers = ["Model", "Category", "Group", "Median", "Lower CI", "Upper CI"]
+        table_all_eod = self.create_table_widget(headers, all_eod_rows)
+        table_all_aaod = self.create_table_widget(headers, all_aaod_rows)
+        headers.insert(3, "Metric")  # Insert "Metric" column header
         table_filtered = self.create_table_widget(headers, filtered_rows)
         result_tabs = QTabWidget()
-        result_tabs.addTab(table_all, "All EOD/AAOD Values")
-        result_tabs.addTab(table_filtered, "Filtered (CI excludes zero)")
+        result_tabs.addTab(table_all_eod, "All EOD Values")
+        result_tabs.addTab(table_all_aaod, "All AAOD Values")
+        result_tabs.addTab(table_filtered, "Filtered (values outside [-0.1, 0.1])")
         # Retain the progress output tab.
         result_tabs.addTab(self.progress_view, "Progress Output")
         self.setCentralWidget(result_tabs)
