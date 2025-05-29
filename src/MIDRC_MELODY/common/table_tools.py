@@ -23,7 +23,7 @@ _ORANGE: Final = "\033[38;2;255;165;0m"
 _RESET: Final = "\033[0m"
 
 
-def _format_value(value: float, qualifies: bool, color: str) -> str:
+def _format_console_value(value: float, qualifies: bool, color: str) -> str:
     """
     Format a numeric value with ANSI color if it qualifies.
     """
@@ -53,10 +53,13 @@ def _build_eod_aaod_tables_generic(
         color_eod_negative = _MAROON
         color_eod_positive = _GREEN
         color_aaod = _ORANGE
-        format_fn = _format_value  # uses ANSI codes
+        format_fn = _format_console_value  # uses ANSI codes
     else:
         # For GUI, use plain formatting
-        from PySide6.QtGui import QColor
+        try:
+            from PySide6.QtGui import QColor
+        except ImportError:
+            raise ImportError("PySide6 is required for GUI table generation.")
         color_eod_negative = QColor(128, 0, 0)
         color_eod_positive = QColor(0, 128, 0)
         color_aaod = QColor(255, 165, 0)
@@ -76,17 +79,13 @@ def _build_eod_aaod_tables_generic(
                     median, (ci_lo, ci_hi) = metrics[metric]
                     if metric == 'eod':
                         qualifies = abs(median) > 0.1
-                        if console:
-                            color = color_eod_negative if median < 0 else color_eod_positive
-                        else:
-                            color = color_eod_negative if (median < 0 and qualifies) else (color_eod_positive if qualifies else None)
+                        color = color_eod_negative if median < 0 else color_eod_positive
+                        if ~qualifies:
+                            color = None
                         target_list = all_eod
                     else:
                         qualifies = median > 0.1
-                        if console:
-                            color = color_aaod
-                        else:
-                            color = color_aaod if qualifies else None
+                        color = color_aaod if qualifies else None
                         target_list = all_aaod
                     
                     # Format each cell
@@ -102,11 +101,11 @@ def _build_eod_aaod_tables_generic(
                     
                     if qualifies:
                         # For filtered rows, insert the metric name.
+                        row_f = row.copy()
+                        row_f.insert(3, metric.upper())
                         if console:
-                            filtered.append([model, category, group, metric.upper(), val_str, lo_str, hi_str])
+                            filtered.append(row_f)
                         else:
-                            row_f = row.copy()
-                            row_f.insert(3, metric.upper())
                             filtered.append((row_f, color))
                             
     # Sorting: console rows are sorted by the first 4 cells; for GUI, sort by row[0] element.
@@ -167,9 +166,9 @@ def _build_delta_tables(
                 qualifies = ci_lo > 0 or ci_hi < 0
                 color = _MAROON if delta < 0 else _GREEN
 
-                delta_str = _format_value(delta, qualifies, color)
-                lo_str = _format_value(ci_lo, qualifies, color)
-                hi_str = _format_value(ci_hi, qualifies, color)
+                delta_str = _format_console_value(delta, qualifies, color)
+                lo_str = _format_console_value(ci_lo, qualifies, color)
+                hi_str = _format_console_value(ci_hi, qualifies, color)
                 row = [model, category, group, delta_str, lo_str, hi_str]
                 all_deltas.append(row)
 
