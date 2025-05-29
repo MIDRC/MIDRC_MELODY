@@ -127,7 +127,7 @@ class MainWindow(QMainWindow):
                     item = QTableWidgetItem(cell)
 
                 # Update the color of the median, lower CI, and upper CI columns if row_color is provided.
-                if cell in row_data[-3:] and row_color is not None:
+                if c >= len(row_data) - 3 and row_color is not None:
                     item.setForeground(QBrush(row_color))
                     font = item.font()
                     font.setBold(True)
