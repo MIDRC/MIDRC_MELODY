@@ -16,6 +16,7 @@
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
 import json
 import os
+from typing import cast
 
 from PySide6.QtCore import QSettings, QThreadPool, Slot
 from PySide6.QtGui import QAction, QBrush, QColor, QFontDatabase, QIcon
@@ -246,23 +247,20 @@ class MainWindow(QMainWindow):
         self.progress_view.setFont(fixed)
         self.progress_view.setLineWrapMode(QPlainTextEdit.NoWrap)
         # No longer instantiate ANSIProcessor; we'll use its static function instead.
-        progress_tabs: QTabWidget = self.centralWidget()
+        progress_tabs: QTabWidget = cast(QTabWidget, self.centralWidget())
         progress_tabs.insertTab(0, self.progress_view, "Progress Output")
         progress_tabs.setCurrentIndex(0)
-        # progress_tabs.addTab(self.progress_view, "Progress Output")
-        # self.setCentralWidget(progress_tabs)
 
     def append_progress(self, text: str) -> None:
         # Use ANSIProcessor.process() as a static function to update the progress_view.
         ANSIProcessor.process(self.progress_view, text)
 
     def update_tabs(self, tab_dict):
-        tab_widget: QTabWidget = self.centralWidget()
+        tab_widget: QTabWidget = cast(QTabWidget, self.centralWidget())
         # Remove existing tabs that match the names in tab_dict.
         for i in reversed(range(tab_widget.count())):
             if tab_widget.tabText(i) in tab_dict.values():
                 tab_widget.removeTab(i)
-        loc = 0
         # Add new tabs based on the provided tab_dict starting at index 1.
         for index, (tab, tab_name) in enumerate(tab_dict.items(), start=1):
             tab_widget.insertTab(index, tab, tab_name)
