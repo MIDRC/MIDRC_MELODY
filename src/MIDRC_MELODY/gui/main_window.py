@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         self._createMenuBar()
         self._createToolBar()
         self._createCentralWidget()
-        self.progress_view = None  # Will hold a QPlainTextEdit for live progress
+        self.progress_view: QPlainTextEdit = QPlainTextEdit()  # Holds a QPlainTextEdit for live progress
         self._ansi = None  # Will hold the ANSIProcessor for live progress
 
     def _createMenuBar(self):
@@ -238,20 +238,36 @@ class MainWindow(QMainWindow):
 
     def show_progress_view(self):
         """Replace the central widget with a progress view to display live console output."""
-        self.progress_view = QPlainTextEdit()
+        if not self.progress_view:
+            self.progress_view = QPlainTextEdit()
         self.progress_view.setReadOnly(True)
         fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)  # platform-native mono
         fixed.setPointSize(10)  # pick a size you like
         self.progress_view.setFont(fixed)
         self.progress_view.setLineWrapMode(QPlainTextEdit.NoWrap)
         # No longer instantiate ANSIProcessor; we'll use its static function instead.
-        progress_tabs = QTabWidget()
-        progress_tabs.addTab(self.progress_view, "Progress Output")
-        self.setCentralWidget(progress_tabs)
+        progress_tabs: QTabWidget = self.centralWidget()
+        progress_tabs.insertTab(0, self.progress_view, "Progress Output")
+        progress_tabs.setCurrentIndex(0)
+        # progress_tabs.addTab(self.progress_view, "Progress Output")
+        # self.setCentralWidget(progress_tabs)
 
     def append_progress(self, text: str) -> None:
         # Use ANSIProcessor.process() as a static function to update the progress_view.
         ANSIProcessor.process(self.progress_view, text)
+
+    def update_tabs(self, tab_dict):
+        tab_widget: QTabWidget = self.centralWidget()
+        # Remove existing tabs that match the names in tab_dict.
+        for i in reversed(range(tab_widget.count())):
+            if tab_widget.tabText(i) in tab_dict.values():
+                tab_widget.removeTab(i)
+        loc = 0
+        # Add new tabs based on the provided tab_dict starting at index 1.
+        for index, (tab, tab_name) in enumerate(tab_dict.items(), start=1):
+            tab_widget.insertTab(index, tab, tab_name)
+        tab_widget.setCurrentIndex(1)  # Switch to the first tab with results.
+
 
     def compute_qwk(self, config: dict):
         # Create an EmittingStream and connect its textWritten signal.
@@ -260,6 +276,9 @@ class MainWindow(QMainWindow):
         with ExitStack() as es:
             es.enter_context(redirect_stdout(stream))
             es.enter_context(redirect_stderr(stream))
+            if not self.progress_view.document().isEmpty():
+                print('\n', '-'*115, '\n')
+            print('Computing QWK metrics...')
             # Build test data once.
             test_data = build_demo_data(config)
             # Calculate delta kappas for subgroup comparisons.
@@ -283,6 +302,7 @@ class MainWindow(QMainWindow):
             for model in sorted(kappas.keys()):
                 row = [model, f"{kappas[model]:.4f}", f"{intervals[model][0]:.4f}", f"{intervals[model][1]:.4f}"]
                 kappas_rows.append((row, None))
+            print(f"Computed {len(all_rows)} delta κ values, {len(filtered_rows)} filtered rows, and {len(kappas_rows)} kappas.")
         # Return a triple containing delta values tables and kappas table.
         return (all_rows, filtered_rows, kappas_rows)
 
@@ -297,13 +317,12 @@ class MainWindow(QMainWindow):
         headers_kappas = ["Model", "Kappa", "Lower CI", "Upper CI"]
         table_kappas = self.create_table_widget(headers_kappas, kappas_rows)
         # Prepare a tab widget with three tabs for delta tables and one for kappas.
-        result_tabs = QTabWidget()
-        result_tabs.addTab(table_kappas, "Kappas & Intervals")
-        result_tabs.addTab(table_all, "All Delta κ Values")
-        result_tabs.addTab(table_filtered, "QWK Filtered (CI Excludes Zero)")
-        # Retain progress output tab.
-        result_tabs.addTab(self.progress_view, "Progress Output")
-        self.setCentralWidget(result_tabs)
+        tabs = {
+            table_kappas: r"Kappas & Intervals",
+            table_all: "All Delta κ Values",
+            table_filtered: r"QWK Filtered (CI Excludes Zero)"
+        }
+        self.update_tabs(tabs)
 
     def compute_eod_aaod(self, config: dict):
         # Create an EmittingStream and connect its textWritten signal using a queued connection.
@@ -312,13 +331,17 @@ class MainWindow(QMainWindow):
         with ExitStack() as es:
             es.enter_context(redirect_stdout(stream))
             es.enter_context(redirect_stderr(stream))
+            if not self.progress_view.document().isEmpty():
+                print('\n', '-'*115, '\n')
+            print('Computing EOD/AAOD metrics...')
             t_data = build_demo_data(config)
             threshold = config['binary threshold']
             matched_df = binarize_scores(t_data.matched_df, t_data.truth_col, t_data.test_cols, threshold=threshold)
             from dataclasses import replace
             test_data = replace(t_data, matched_df=matched_df)
             eod_aaod = calculate_eod_aaod(test_data)
-            return build_eod_aaod_tables_gui(eod_aaod)
+            print(f"Computed EOD/AAOD metrics for {len(eod_aaod)} models with binary threshold {threshold}.")
+        return build_eod_aaod_tables_gui(eod_aaod)
 
     @Slot()
     def calculate_eod_aaod(self):
@@ -340,13 +363,12 @@ class MainWindow(QMainWindow):
         table_all_aaod = self.create_table_widget(headers, all_aaod_rows)
         headers.insert(3, "Metric")  # Insert "Metric" column header
         table_filtered = self.create_table_widget(headers, filtered_rows)
-        result_tabs = QTabWidget()
-        result_tabs.addTab(table_all_eod, "All EOD Values")
-        result_tabs.addTab(table_all_aaod, "All AAOD Values")
-        result_tabs.addTab(table_filtered, "EOD/AAOD Filtered (values outside [-0.1, 0.1])")
-        # Retain the progress output tab.
-        result_tabs.addTab(self.progress_view, "Progress Output")
-        self.setCentralWidget(result_tabs)
+        tabs = {
+            table_all_eod: "All EOD Values",
+            table_all_aaod: "All AAOD Values",
+            table_filtered: r"EOD/AAOD Filtered (values outside [-0.1, 0.1])"
+        }
+        self.update_tabs(tabs)
 
     @Slot()
     def calculate_qwk(self):
