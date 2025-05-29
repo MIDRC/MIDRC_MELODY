@@ -26,6 +26,7 @@ import yaml
 # Import functions for EOD/AAOD
 from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data as build_demo_data
 from MIDRC_MELODY.common.eod_aaod_metrics import binarize_scores, calculate_eod_aaod
+from MIDRC_MELODY.common.table_tools import build_eod_aaod_tables_gui
 # Import functions for QWK
 from MIDRC_MELODY.common.qwk_metrics import calculate_delta_kappa, calculate_kappas_and_intervals
 # Import custom classes for GUI
@@ -43,11 +44,6 @@ class NumericSortTableWidgetItem(QTableWidgetItem):
             return self_data < other_data
         except ValueError:
             return QTableWidgetItem.__lt__(self, other)
-
-
-def _sort_rows_gui(rows: list[tuple]) -> list[tuple]:
-    """Sort rows by Model, Category, Group, then Metric if present."""
-    return sorted(rows, key=lambda x: tuple(x[0][:4]))
 
 
 class MainWindow(QMainWindow):
@@ -302,7 +298,7 @@ class MainWindow(QMainWindow):
         result_tabs = QTabWidget()
         result_tabs.addTab(table_kappas, "Kappas & Intervals")
         result_tabs.addTab(table_all, "All Delta κ Values")
-        result_tabs.addTab(table_filtered, "Filtered (CI Excludes Zero)")
+        result_tabs.addTab(table_filtered, "QWK Filtered (CI Excludes Zero)")
         # Retain progress output tab.
         result_tabs.addTab(self.progress_view, "Progress Output")
         self.setCentralWidget(result_tabs)
@@ -320,31 +316,7 @@ class MainWindow(QMainWindow):
             from dataclasses import replace
             test_data = replace(t_data, matched_df=matched_df)
             eod_aaod = calculate_eod_aaod(test_data)
-            all_eod, all_aaod, filtered = [], [], []
-            maroon = QColor(128, 0, 0)
-            green = QColor(0, 128, 0)
-            orange = QColor(255, 165, 0)
-            for category, model_data in eod_aaod.items():
-                for model, groups in model_data.items():
-                    for group, metrics in groups.items():
-                        for metric in ('eod', 'aaod'):
-                            median, (lower_ci, upper_ci) = metrics[metric]
-                            # Determine criteria and color
-                            if metric == 'eod':
-                                qualifies = abs(median) > 0.1
-                                color = maroon if median < 0 and qualifies else green if qualifies else None
-                                target_list = all_eod
-                            else:
-                                qualifies = median > 0.1
-                                color = orange if qualifies else None
-                                target_list = all_aaod
-                            row = [model, category, group, f"{median:.4f}", f"{lower_ci:.4f}", f"{upper_ci:.4f}"]
-                            target_list.append((row, color))
-                            if qualifies:
-                                row_f = row.copy()  # Copy the row to insert metric
-                                row_f.insert(3, metric.upper())
-                                filtered.append((row_f, color))
-        return _sort_rows_gui(all_eod), _sort_rows_gui(all_aaod), _sort_rows_gui(filtered)
+            return build_eod_aaod_tables_gui(eod_aaod)
 
     @Slot()
     def calculate_eod_aaod(self):
@@ -369,7 +341,7 @@ class MainWindow(QMainWindow):
         result_tabs = QTabWidget()
         result_tabs.addTab(table_all_eod, "All EOD Values")
         result_tabs.addTab(table_all_aaod, "All AAOD Values")
-        result_tabs.addTab(table_filtered, "Filtered (values outside [-0.1, 0.1])")
+        result_tabs.addTab(table_filtered, "EOD/AAOD Filtered (values outside [-0.1, 0.1])")
         # Retain the progress output tab.
         result_tabs.addTab(self.progress_view, "Progress Output")
         self.setCentralWidget(result_tabs)

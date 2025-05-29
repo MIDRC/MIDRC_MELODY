@@ -38,17 +38,35 @@ def _sort_rows(rows: List[List[str]]) -> List[List[str]]:
     return sorted(rows, key=lambda r: tuple(r[:4]))
 
 
-def _print_section(title: str, rows: List[List[str]], headers: List[str], tablefmt: str) -> None:
-    print(title)
-    print(tabulate(rows, headers=headers, tablefmt=tablefmt))
-    print()
-
-
-def _build_eod_aaod_tables(
-    eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Tuple[float, Tuple[float, float]]]]]]
-) -> Tuple[List[List[str]], List[List[str]], List[List[str]]]:
-    all_eod, all_aaod, filtered = [], [], []
-
+# Consolidate duplicated code into a generic function.
+def _build_eod_aaod_tables_generic(
+    eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Tuple[float, Tuple[float, float]]]]]], *,
+    console: bool
+):
+    """
+    Generate tables for EOD/AAOD metrics.
+    If console is True, returns tables of list[str] rows with ANSI coloring.
+    If console is False, returns tables as tuples of (row: list[str], color: QColor | None).
+    """
+    # Set up color and formatting based on mode.
+    if console:
+        color_eod_negative = _MAROON
+        color_eod_positive = _GREEN
+        color_aaod = _ORANGE
+        format_fn = _format_value  # uses ANSI codes
+    else:
+        # For GUI, use plain formatting
+        from PySide6.QtGui import QColor
+        color_eod_negative = QColor(128, 0, 0)
+        color_eod_positive = QColor(0, 128, 0)
+        color_aaod = QColor(255, 165, 0)
+        format_fn = lambda v, qualifies, col: f"{v:.4f}"
+    
+    # Initialize lists; console returns lists of rows, GUI returns tuples (row, color).
+    all_eod = []
+    all_aaod = []
+    filtered = []
+    
     for category, model_data in eod_aaod.items():
         for model, groups in model_data.items():
             for group, metrics in groups.items():
@@ -56,35 +74,65 @@ def _build_eod_aaod_tables(
                     if metric not in metrics:
                         continue
                     median, (ci_lo, ci_hi) = metrics[metric]
-                    # Determine criteria and color
                     if metric == 'eod':
                         qualifies = abs(median) > 0.1
-                        color = _MAROON if median < 0 else _GREEN
+                        if console:
+                            color = color_eod_negative if median < 0 else color_eod_positive
+                        else:
+                            color = color_eod_negative if (median < 0 and qualifies) else (color_eod_positive if qualifies else None)
                         target_list = all_eod
                     else:
                         qualifies = median > 0.1
-                        color = _ORANGE
+                        if console:
+                            color = color_aaod
+                        else:
+                            color = color_aaod if qualifies else None
                         target_list = all_aaod
-
-                    # Format cells
-                    val_str = _format_value(median, qualifies, color)
-                    lo_str = _format_value(ci_lo, qualifies, color)
-                    hi_str = _format_value(ci_hi, qualifies, color)
+                    
+                    # Format each cell
+                    val_str = format_fn(median, qualifies, color)
+                    lo_str = format_fn(ci_lo, qualifies, color)
+                    hi_str = format_fn(ci_hi, qualifies, color)
+                    
                     row = [model, category, group, val_str, lo_str, hi_str]
-                    target_list.append(row)
-
+                    if console:
+                        target_list.append(row)
+                    else:
+                        target_list.append((row, color))
+                    
                     if qualifies:
-                        filtered.append([
-                            model,
-                            category,
-                            group,
-                            metric.upper(),
-                            val_str,
-                            lo_str,
-                            hi_str,
-                        ])
+                        # For filtered rows, insert the metric name.
+                        if console:
+                            filtered.append([model, category, group, metric.upper(), val_str, lo_str, hi_str])
+                        else:
+                            row_f = row.copy()
+                            row_f.insert(3, metric.upper())
+                            filtered.append((row_f, color))
+                            
+    # Sorting: console rows are sorted by the first 4 cells; for GUI, sort by row[0] element.
+    if console:
+        sorted_all_eod = _sort_rows(all_eod)
+        sorted_all_aaod = _sort_rows(all_aaod)
+        sorted_filtered = _sort_rows(filtered)
+    else:
+        sorted_all_eod = sorted(all_eod, key=lambda x: tuple(x[0][:4]))
+        sorted_all_aaod = sorted(all_aaod, key=lambda x: tuple(x[0][:4]))
+        sorted_filtered = sorted(filtered, key=lambda x: tuple(x[0][:4]))
+    
+    return sorted_all_eod, sorted_all_aaod, sorted_filtered
 
-    return _sort_rows(all_eod), _sort_rows(all_aaod), _sort_rows(filtered)
+
+def _print_section(title: str, rows: List[List[str]], headers: List[str], tablefmt: str) -> None:
+    print(title)
+    print(tabulate(rows, headers=headers, tablefmt=tablefmt))
+    print()
+
+
+def _build_eod_aaod_tables_console(
+    eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Tuple[float, Tuple[float, float]]]]]]
+) -> Tuple[List[List[str]], List[List[str]], List[List[str]]]:
+    # Delegate table-building to the generic function with console=True.
+    return _build_eod_aaod_tables_generic(eod_aaod, console=True)
 
 
 def print_table_of_nonzero_eod_aaod(
@@ -94,7 +142,7 @@ def print_table_of_nonzero_eod_aaod(
     """
     Print tables for EOD and AAOD medians, highlighting values meeting criteria.
     """
-    all_eod, all_aaod, filtered = _build_eod_aaod_tables(eod_aaod)
+    all_eod, all_aaod, filtered = _build_eod_aaod_tables_console(eod_aaod)
 
     headers_all = ['Model', 'Category', 'Group', 'Median', 'Lower CI', 'Upper CI']
     headers_filtered = ['Model', 'Category', 'Group', 'Metric', 'Median', 'Lower CI', 'Upper CI']
@@ -147,3 +195,15 @@ def print_table_of_nonzero_deltas(
         _print_section('Delta Kappa values with 95% CI excluding zero:', filtered, headers, tablefmt)
     else:
         print('No model/group combinations meeting the specified criteria for Delta Kappa.')
+
+
+try:
+    from PySide6.QtGui import QColor
+except ImportError:
+    build_eod_aaod_tables_gui = None
+else:
+    def build_eod_aaod_tables_gui(
+            eod_aaod: Dict[str, Dict[str, Dict[Any, Dict[str, Tuple[float, Tuple[float, float]]]]]]
+    ) -> tuple[list[tuple[list[str], "QColor | None"]], list[tuple[list[str], "QColor | None"]], list[tuple[list[str], "QColor | None"]]]:
+        # Delegate table-building to the generic function with console=False.
+        return _build_eod_aaod_tables_generic(eod_aaod, console=False)
