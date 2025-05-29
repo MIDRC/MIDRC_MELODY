@@ -15,6 +15,7 @@
 
 try:
     from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import QTimer, Qt
     from MIDRC_MELODY.gui.main_window import MainWindow  # Import the custom MainWindow
 except ImportError:
     raise ImportError("To use the GUI features, please install the package PySide6.\n"
@@ -22,11 +23,37 @@ except ImportError:
                       "pip install PySide6\n")
 
 
+# Global list to hold window references.
+_open_windows = []
+
+
 def launch_gui() -> None:
-    app = QApplication([])
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+        new_app = True
+    else:
+        new_app = False
     window = MainWindow()
+    _open_windows.clear()
+    _open_windows.append(window)
+    
+    # Store original window flags
+    original_flags = window.windowFlags()
+    
     window.show()
-    app.exec()
+    # Temporarily add the always-on-top flag without losing other flags.
+    QTimer.singleShot(100, lambda: (
+         window.setWindowFlags(original_flags | Qt.WindowStaysOnTopHint),
+         window.show()
+    ))
+    # After a short delay, restore the original flags with the window still in the front.
+    QTimer.singleShot(300, lambda: (
+         window.setWindowFlags(original_flags),
+         window.show()
+    ))
+    if new_app:
+        app.exec()
 
 
 def main():
