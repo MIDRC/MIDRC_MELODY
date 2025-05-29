@@ -23,12 +23,12 @@ _ORANGE: Final = "\033[38;2;255;165;0m"
 _RESET: Final = "\033[0m"
 
 
-def _format_console_value(value: float, qualifies: bool, color: str) -> str:
+def _format_console_value(value: float, color: str) -> str:
     """
     Format a numeric value with ANSI color if it qualifies.
     """
     formatted = f"{value:.4f}"
-    if qualifies:
+    if color is not None:
         return f"{color}{formatted}{_RESET}"
     return formatted
 
@@ -63,7 +63,7 @@ def _build_eod_aaod_tables_generic(
         color_eod_negative = QColor(128, 0, 0)
         color_eod_positive = QColor(0, 128, 0)
         color_aaod = QColor(255, 165, 0)
-        format_fn = lambda v, qualifies, col: f"{v:.4f}"
+        format_fn = lambda v, col: f"{v:.4f}"
     
     # Initialize lists; console returns lists of rows, GUI returns tuples (row, color).
     all_eod = []
@@ -79,9 +79,7 @@ def _build_eod_aaod_tables_generic(
                     median, (ci_lo, ci_hi) = metrics[metric]
                     if metric == 'eod':
                         qualifies = abs(median) > 0.1
-                        color = color_eod_negative if median < 0 else color_eod_positive
-                        if ~qualifies:
-                            color = None
+                        color = None if not qualifies else color_eod_negative if median < 0 else color_eod_positive
                         target_list = all_eod
                     else:
                         qualifies = median > 0.1
@@ -89,9 +87,9 @@ def _build_eod_aaod_tables_generic(
                         target_list = all_aaod
                     
                     # Format each cell
-                    val_str = format_fn(median, qualifies, color)
-                    lo_str = format_fn(ci_lo, qualifies, color)
-                    hi_str = format_fn(ci_hi, qualifies, color)
+                    val_str = format_fn(median, color)
+                    lo_str = format_fn(ci_lo, color)
+                    hi_str = format_fn(ci_hi, color)
                     
                     row = [model, category, group, val_str, lo_str, hi_str]
                     if console:
@@ -164,11 +162,11 @@ def _build_delta_tables(
         for model, groups in model_data.items():
             for group, (delta, (ci_lo, ci_hi)) in groups.items():
                 qualifies = ci_lo > 0 or ci_hi < 0
-                color = _MAROON if delta < 0 else _GREEN
+                color = None if not qualifies else _MAROON if delta < 0 else _GREEN
 
-                delta_str = _format_console_value(delta, qualifies, color)
-                lo_str = _format_console_value(ci_lo, qualifies, color)
-                hi_str = _format_console_value(ci_hi, qualifies, color)
+                delta_str = _format_console_value(delta, color)
+                lo_str = _format_console_value(ci_lo, color)
+                hi_str = _format_console_value(ci_hi, color)
                 row = [model, category, group, delta_str, lo_str, hi_str]
                 all_deltas.append(row)
 
