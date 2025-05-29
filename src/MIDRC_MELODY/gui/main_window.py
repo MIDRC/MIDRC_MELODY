@@ -19,7 +19,7 @@ import os
 from typing import cast
 
 from PySide6.QtCore import QSettings, QThreadPool, Slot
-from PySide6.QtGui import QAction, QBrush, QColor, QFontDatabase, QIcon
+from PySide6.QtGui import QAction, QBrush, QColor, QFontDatabase, QIcon, QTextCursor
 from PySide6.QtWidgets import (QDialog, QMainWindow, QMessageBox, QPlainTextEdit, QSizePolicy, QTableWidgetItem,
                                QTabWidget, QToolBar, QWidget, QFileDialog)
 import yaml
@@ -275,6 +275,8 @@ class MainWindow(QMainWindow):
             es.enter_context(redirect_stdout(stream))
             es.enter_context(redirect_stderr(stream))
             if not self.progress_view.document().isEmpty():
+                # Move cursor to the end of the progress view.
+                self.progress_view.moveCursor(QTextCursor.End)
                 print('\n', '-'*115, '\n')
             print('Computing QWK metrics...')
             # Build test data once.
@@ -330,6 +332,8 @@ class MainWindow(QMainWindow):
             es.enter_context(redirect_stdout(stream))
             es.enter_context(redirect_stderr(stream))
             if not self.progress_view.document().isEmpty():
+                # Move cursor to the end of the progress view.
+                self.progress_view.moveCursor(QTextCursor.End)
                 print('\n', '-'*115, '\n')
             print('Computing EOD/AAOD metrics...')
             t_data = build_demo_data(config)
