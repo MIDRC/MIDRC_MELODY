@@ -29,8 +29,8 @@ class SpiderPlotData:
     values: List[float] = field(default_factory=list)
     lower_bounds: List[float] = field(default_factory=list)
     upper_bounds: List[float] = field(default_factory=list)
-    ylim_min: float = 0.0
-    ylim_max: float = 1.0
+    ylim_min: Dict[str, float] = field(default_factory=dict)
+    ylim_max: Dict[str, float] = field(default_factory=dict)
     metric: str = ""
     plot_config: Dict[str, Any] = field(default_factory=dict)
 

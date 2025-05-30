@@ -178,18 +178,21 @@ def extract_plot_data(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, T
     return groups, values, lower_bounds, upper_bounds
 
 
-def generate_plots_from_delta_kappas(
+def create_spider_plot_data(
     delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
     ai_models: List[str],
     plot_config: Optional[Dict[str, Any]] = None
-) -> None:
+) -> List[SpiderPlotData]:
     """
-    Generate spider plots for delta kappas using consistent scale across models.
+    Create a list of SpiderPlotData instances for each AI model based on delta kappas.
 
     :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
     :arg ai_models: List of test columns (AI model names).
-    :arg plot_config: Optional configuration dictionary for plotting
+    :arg plot_config: Optional configuration dictionary for plotting.
+
+    :returns: Dictionary of SpiderPlotData instances keyed by model names.
     """
+    plot_data_list: List[SpiderPlotData] = []
     all_values, all_lower, all_upper = [], [], []
 
     for model in ai_models:
@@ -200,8 +203,6 @@ def generate_plots_from_delta_kappas(
 
     global_min = min(all_lower) - 0.05
     global_max = max(all_upper) + 0.05
-
-    figures = []
     metric = "QWK"
     base_plot_data = SpiderPlotData(
         ylim_min={metric: global_min},
@@ -215,6 +216,27 @@ def generate_plots_from_delta_kappas(
         plot_data.model_name = model
         plot_data.groups, plot_data.values, plot_data.lower_bounds, plot_data.upper_bounds = \
             extract_plot_data(delta_kappas, model)
+        plot_data_list.append(plot_data)
+
+    return plot_data_list
+
+def generate_plots_from_delta_kappas(
+    delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
+    ai_models: List[str],
+    plot_config: Optional[Dict[str, Any]] = None
+) -> None:
+    """
+    Generate spider plots for delta kappas using consistent scale across models.
+
+    :arg delta_kappas: Dictionary of delta kappa values with 95% confidence intervals.
+    :arg ai_models: List of test columns (AI model names).
+    :arg plot_config: Optional configuration dictionary for plotting
+    """
+
+    figures = []
+
+    plot_data_list = create_spider_plot_data(delta_kappas, ai_models, plot_config)
+    for plot_data in plot_data_list:
         fig = plot_spider_chart(plot_data)
         figures.append(fig)
 

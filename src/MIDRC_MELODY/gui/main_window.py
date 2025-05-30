@@ -16,6 +16,7 @@
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
 import json
 import os
+import sys
 from typing import cast
 
 from PySide6.QtCore import QSettings, QThreadPool, Slot
@@ -27,12 +28,15 @@ import yaml
 # Import functions for EOD/AAOD
 from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data as build_demo_data
 from MIDRC_MELODY.common.eod_aaod_metrics import binarize_scores, calculate_eod_aaod
-from MIDRC_MELODY.common.table_tools import build_eod_aaod_tables_gui
+from MIDRC_MELODY.common.plot_tools import SpiderPlotData
+from MIDRC_MELODY.common.table_tools import build_eod_aaod_tables_gui, GLOBAL_COLORS as GLOBAL_COLORS
 # Import functions for QWK
-from MIDRC_MELODY.common.qwk_metrics import calculate_delta_kappa, calculate_kappas_and_intervals
+from MIDRC_MELODY.common.qwk_metrics import (calculate_delta_kappa, calculate_kappas_and_intervals,
+                                             create_spider_plot_data)
 # Import custom classes for GUI
 from MIDRC_MELODY.gui.config_editor import ConfigEditor
 from MIDRC_MELODY.gui.copyabletableview import CopyableTableWidget
+from MIDRC_MELODY.gui.plotting import display_spider_charts_in_tabs
 from MIDRC_MELODY.gui.tqdm_handler import ANSIProcessor, EmittingStream, Worker
 
 
@@ -255,7 +259,7 @@ class MainWindow(QMainWindow):
         # Use ANSIProcessor.process() as a static function to update the progress_view.
         ANSIProcessor.process(self.progress_view, text)
 
-    def update_tabs(self, tab_dict):
+    def update_tabs(self, tab_dict, *, set_current=True):
         tab_widget: QTabWidget = cast(QTabWidget, self.centralWidget())
         # Remove existing tabs that match the names in tab_dict.
         for i in reversed(range(tab_widget.count())):
@@ -264,10 +268,20 @@ class MainWindow(QMainWindow):
         # Add new tabs based on the provided tab_dict starting at index 1.
         for index, (tab, tab_name) in enumerate(tab_dict.items(), start=1):
             tab_widget.insertTab(index, tab, tab_name)
-        tab_widget.setCurrentIndex(1)  # Switch to the first tab with results.
+        if set_current:
+            tab_widget.setCurrentIndex(1)  # Switch to the first tab with results.
 
+    def create_spider_plot_from_qwk(self, delta_kappas, test_cols, plot_config=None):
+        # Remove updating tabs here; instead, return the charts tab widget.
+        plot_data_list = create_spider_plot_data(delta_kappas, test_cols, plot_config=plot_config)
+        charts_tab = display_spider_charts_in_tabs(plot_data_list)
+        return charts_tab
 
     def compute_qwk(self, config: dict):
+        # Save the original streams
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+
         # Create an EmittingStream and connect its textWritten signal.
         stream = EmittingStream()
         stream.textWritten.connect(self.append_progress)  # using queued connection if needed
@@ -285,8 +299,8 @@ class MainWindow(QMainWindow):
             delta_kappas = calculate_delta_kappa(test_data)
             all_rows = []
             filtered_rows = []
-            maroon = QColor(128, 0, 0)
-            green = QColor(0, 128, 0)
+            maroon = QColor(*GLOBAL_COLORS['kappa_negative'])
+            green = QColor(*GLOBAL_COLORS['kappa_positive'])
             for category, model_data in delta_kappas.items():
                 for model, groups in model_data.items():
                     for group, (delta, (lower_ci, upper_ci)) in groups.items():
@@ -303,28 +317,38 @@ class MainWindow(QMainWindow):
                 row = [model, f"{kappas[model]:.4f}", f"{intervals[model][0]:.4f}", f"{intervals[model][1]:.4f}"]
                 kappas_rows.append((row, None))
             print(f"Computed {len(all_rows)} delta κ values, {len(filtered_rows)} filtered rows, and {len(kappas_rows)} kappas.")
-        # Return a triple containing delta values tables and kappas table.
-        return (all_rows, filtered_rows, kappas_rows)
+
+        # Restore original stdout and stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+        # Remove UI creation from worker thread; instead, return additional values.
+        return all_rows, filtered_rows, kappas_rows, (delta_kappas, test_data.test_cols, config['plot'])
 
     def update_qwk_tables(self, result):
         # Unpack the results from compute_qwk().
-        delta_all, delta_filtered, kappas_rows = result
-        # Create table widgets for delta kappas.
-        headers_delta = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
+        delta_all, delta_filtered, kappas_rows, plot_args = result
+        headers_delta = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper UI"]
         table_all = self.create_table_widget(headers_delta, delta_all)
         table_filtered = self.create_table_widget(headers_delta, delta_filtered)
-        # Create table widget for overall kappas and intervals.
         headers_kappas = ["Model", "Kappa", "Lower CI", "Upper CI"]
         table_kappas = self.create_table_widget(headers_kappas, kappas_rows)
-        # Prepare a tab widget with three tabs for delta tables and one for kappas.
+        # Create charts tab on the main thread.
+        charts_tab = self.create_spider_plot_from_qwk(*plot_args)
+        # Prepare tabs dictionary, including the charts tab.
         tabs = {
-            table_kappas: r"Kappas & Intervals",
+            table_kappas: "Kappas & Intervals",
             table_all: "All Delta κ Values",
-            table_filtered: r"QWK Filtered (CI Excludes Zero)"
+            table_filtered: "QWK Filtered (CI Excludes Zero)",
+            charts_tab: "QWK Spider Charts"
         }
         self.update_tabs(tabs)
 
     def compute_eod_aaod(self, config: dict):
+        # Save the original streams
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+
         # Create an EmittingStream and connect its textWritten signal using a queued connection.
         stream = EmittingStream()
         stream.textWritten.connect(self.append_progress)  # UPDATED
@@ -343,6 +367,11 @@ class MainWindow(QMainWindow):
             test_data = replace(t_data, matched_df=matched_df)
             eod_aaod = calculate_eod_aaod(test_data)
             print(f"Computed EOD/AAOD metrics for {len(eod_aaod)} models with binary threshold {threshold}.")
+
+        # Restore original stdout and stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
         return build_eod_aaod_tables_gui(eod_aaod)
 
     @Slot()
