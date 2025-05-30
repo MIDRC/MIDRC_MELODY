@@ -84,7 +84,6 @@ class MainWindow(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)  # Show both icon and text
         self.addToolBar(toolbar)
 
-        # Use alternative icon if 'view-statistics' is not available.
         eod_icon = QIcon.fromTheme(QIcon.ThemeIcon.Computer)
         eod_act = QAction(eod_icon, "EOD/AAOD Metrics", self)
         eod_act.setToolTip("Calculate EOD/AAOD Metrics")
