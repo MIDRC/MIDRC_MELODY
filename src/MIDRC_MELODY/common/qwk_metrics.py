@@ -178,7 +178,7 @@ def extract_plot_data(delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, T
     return groups, values, lower_bounds, upper_bounds
 
 
-def create_spider_plot_data(
+def create_spider_plot_data_qwk(
     delta_kappas: Dict[str, Dict[str, Dict[Any, Tuple[float, Tuple[float, float]]]]],
     ai_models: List[str],
     plot_config: Optional[Dict[str, Any]] = None
@@ -235,7 +235,7 @@ def generate_plots_from_delta_kappas(
 
     figures = []
 
-    plot_data_list = create_spider_plot_data(delta_kappas, ai_models, plot_config)
+    plot_data_list = create_spider_plot_data_qwk(delta_kappas, ai_models, plot_config)
     for plot_data in plot_data_list:
         fig = plot_spider_chart(plot_data)
         figures.append(fig)

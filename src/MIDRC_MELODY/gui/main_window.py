@@ -17,7 +17,7 @@ from contextlib import ExitStack, redirect_stderr, redirect_stdout
 import json
 import os
 import sys
-from typing import cast
+from typing import cast, Dict, List
 
 from PySide6.QtCore import QSettings, QThreadPool, Slot
 from PySide6.QtGui import QAction, QBrush, QColor, QFontDatabase, QIcon, QTextCursor
@@ -27,12 +27,13 @@ import yaml
 
 # Import functions for EOD/AAOD
 from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data as build_demo_data
-from MIDRC_MELODY.common.eod_aaod_metrics import binarize_scores, calculate_eod_aaod
+from MIDRC_MELODY.common.eod_aaod_metrics import (binarize_scores, calculate_eod_aaod,
+                                                  create_spider_plot_data_eod_aaod, generate_plot_data_eod_aaod)
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
 from MIDRC_MELODY.common.table_tools import build_eod_aaod_tables_gui, GLOBAL_COLORS as GLOBAL_COLORS
 # Import functions for QWK
 from MIDRC_MELODY.common.qwk_metrics import (calculate_delta_kappa, calculate_kappas_and_intervals,
-                                             create_spider_plot_data)
+                                             create_spider_plot_data_qwk)
 # Import custom classes for GUI
 from MIDRC_MELODY.gui.config_editor import ConfigEditor
 from MIDRC_MELODY.gui.copyabletableview import CopyableTableWidget
@@ -89,10 +90,6 @@ class MainWindow(QMainWindow):
         qwk_act = QAction("QWK Metrics", self)
         qwk_act.triggered.connect(self.calculate_qwk)
         toolbar.addAction(qwk_act)
-
-        charts_act = QAction("Display Charts", self)
-        charts_act.triggered.connect(self.display_charts)
-        toolbar.addAction(charts_act)
 
         # Add spacer widget to push the configuration option to the right
         spacer = QWidget()
@@ -271,9 +268,9 @@ class MainWindow(QMainWindow):
         if set_current:
             tab_widget.setCurrentIndex(1)  # Switch to the first tab with results.
 
-    def create_spider_plot_from_qwk(self, delta_kappas, test_cols, plot_config=None):
+    def create_spider_plot_from_qwk(self, delta_kappas, test_cols, plot_config=None) -> QTabWidget:
         # Remove updating tabs here; instead, return the charts tab widget.
-        plot_data_list = create_spider_plot_data(delta_kappas, test_cols, plot_config=plot_config)
+        plot_data_list = create_spider_plot_data_qwk(delta_kappas, test_cols, plot_config=plot_config)
         charts_tab = display_spider_charts_in_tabs(plot_data_list)
         return charts_tab
 
@@ -340,9 +337,28 @@ class MainWindow(QMainWindow):
             table_kappas: "Kappas & Intervals",
             table_all: "All Delta κ Values",
             table_filtered: "QWK Filtered (CI Excludes Zero)",
-            charts_tab: "QWK Spider Charts"
+            charts_tab: "QWK Spider Charts",
         }
         self.update_tabs(tabs)
+
+    def create_spider_plot_from_eod_aaod(self, eod_aaod, test_cols, plot_config=None, *, metrics=('eod', 'aaod')) -> List[QTabWidget]:
+        plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)
+        base_plot_data = SpiderPlotData(ylim_max=global_max, ylim_min=global_min, plot_config=plot_config)
+        plot_data_list = create_spider_plot_data_eod_aaod(plot_data_dict, test_cols, metrics, base_plot_data)
+        chart_data: Dict[str, List[SpiderPlotData]] = {}
+        for plot_data in plot_data_list:
+            # Use the metric name as the key for the charts tab.
+            metric = plot_data.metric
+            if metric not in chart_data:
+                chart_data[metric] = []
+            chart_data[metric].append(plot_data)
+
+        chart_tabs: List[QTabWidget] = []
+        for chart, data in chart_data.items():
+            chart_tabs.append(display_spider_charts_in_tabs(data))
+            chart_tabs[-1].setObjectName(f"{chart.upper()} Spider Charts")
+
+        return chart_tabs
 
     def compute_eod_aaod(self, config: dict):
         # Save the original streams
@@ -372,7 +388,8 @@ class MainWindow(QMainWindow):
         sys.stdout = original_stdout
         sys.stderr = original_stderr
 
-        return build_eod_aaod_tables_gui(eod_aaod)
+        tables = build_eod_aaod_tables_gui(eod_aaod)
+        return *tables, (eod_aaod, test_data.test_cols, config['plot'])
 
     @Slot()
     def calculate_eod_aaod(self):
@@ -388,17 +405,21 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error in EOD/AAOD Metrics: {e}")
 
     def update_eod_aaod_tables(self, result):
-        all_eod_rows, all_aaod_rows, filtered_rows = result
+        all_eod_rows, all_aaod_rows, filtered_rows, plot_args = result
         headers = ["Model", "Category", "Group", "Median", "Lower CI", "Upper CI"]
         table_all_eod = self.create_table_widget(headers, all_eod_rows)
         table_all_aaod = self.create_table_widget(headers, all_aaod_rows)
         headers.insert(3, "Metric")  # Insert "Metric" column header
         table_filtered = self.create_table_widget(headers, filtered_rows)
-        tabs = {
+        # Create charts tab on the main thread.
+        chart_tabs = self.create_spider_plot_from_eod_aaod(*plot_args)
+        tabs: Dict[QWidget, str] = {
             table_all_eod: "All EOD Values",
             table_all_aaod: "All AAOD Values",
-            table_filtered: r"EOD/AAOD Filtered (values outside [-0.1, 0.1])"
+            table_filtered: r"EOD/AAOD Filtered (values outside [-0.1, 0.1])",
         }
+        for chart_tab in chart_tabs:
+            tabs[chart_tab] = chart_tab.objectName()
         self.update_tabs(tabs)
 
     @Slot()
@@ -413,7 +434,3 @@ class MainWindow(QMainWindow):
             self.threadpool.start(worker)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error in QWK Metrics: {e}")
-
-    @Slot()
-    def display_charts(self):
-        QMessageBox.information(self, "Charts", "Displaying Charts...")

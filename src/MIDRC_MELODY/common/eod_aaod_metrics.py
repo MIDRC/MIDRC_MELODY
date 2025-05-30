@@ -236,6 +236,26 @@ def generate_plot_data_eod_aaod(
     return plot_data_dict, global_min, global_max
 
 
+def create_spider_plot_data_eod_aaod(
+    plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]],
+    test_cols: List[str],
+    metrics: List[str] = ('eod', 'aaod'),
+    base_plot_data: Optional[SpiderPlotData] = None,
+) -> List[SpiderPlotData]:
+    plot_data_list: List[SpiderPlotData] = []
+    if base_plot_data is None:
+        base_plot_data = SpiderPlotData()
+    for metric in metrics:
+        for model in test_cols:
+            # Create a new copy based on the base instance
+            plot_data = SpiderPlotData(**base_plot_data.__dict__)
+            plot_data.metric = metric
+            plot_data.model_name = model
+            plot_data.groups, plot_data.values, plot_data.lower_bounds, plot_data.upper_bounds = \
+                plot_data_dict[metric][model]
+            plot_data_list.append(plot_data)
+    return plot_data_list
+
 def plot_data_eod_aaod(
     plot_data_dict: Dict[str, Dict[str, Tuple[List[str], List[float], List[float], List[float]]]],
     test_cols: List[str],
@@ -252,19 +272,12 @@ def plot_data_eod_aaod(
 
     :returns: Dictionary of generated figures for each metric.
     """
+    plot_data_list = create_spider_plot_data_eod_aaod(plot_data_dict, test_cols, metrics, base_plot_data)
     figures_dict: Dict[str, List[Any]] = {metric: [] for metric in metrics}
-    if base_plot_data is None:
-        base_plot_data = SpiderPlotData()
-    for metric in metrics:
-        for model in test_cols:
-            # Create a new copy based on the base instance
-            plot_data = SpiderPlotData(**base_plot_data.__dict__)
-            plot_data.metric = metric
-            plot_data.model_name = model
-            plot_data.groups, plot_data.values, plot_data.lower_bounds, plot_data.upper_bounds = \
-                plot_data_dict[metric][model]
-            fig = plot_spider_chart(plot_data)
-            figures_dict[metric].append(fig)
+
+    for plot_data in plot_data_list:
+        fig = plot_spider_chart(plot_data)
+        figures_dict[plot_data.metric].append(fig)
 
     for figures in figures_dict.values():
         display_figures_grid(figures)
