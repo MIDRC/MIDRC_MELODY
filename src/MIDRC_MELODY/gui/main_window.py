@@ -19,7 +19,7 @@ import os
 import sys
 from typing import cast, Dict, List
 
-from PySide6.QtCore import QSettings, QThreadPool, Slot
+from PySide6.QtCore import QSettings, Qt, QThreadPool, Slot
 from PySide6.QtGui import QAction, QBrush, QColor, QFontDatabase, QIcon, QTextCursor
 from PySide6.QtWidgets import (QDialog, QMainWindow, QMessageBox, QPlainTextEdit, QSizePolicy, QTableWidgetItem,
                                QTabWidget, QToolBar, QWidget, QFileDialog)
@@ -81,13 +81,20 @@ class MainWindow(QMainWindow):
 
     def _createToolBar(self):
         toolbar = QToolBar("Main Toolbar")
+        toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)  # Show both icon and text
         self.addToolBar(toolbar)
 
-        eod_act = QAction("EOD/AAOD Metrics", self)
+        # Use alternative icon if 'view-statistics' is not available.
+        eod_icon = QIcon.fromTheme(QIcon.ThemeIcon.Computer)
+        eod_act = QAction(eod_icon, "EOD/AAOD Metrics", self)
+        eod_act.setToolTip("Calculate EOD/AAOD Metrics")
         eod_act.triggered.connect(self.calculate_eod_aaod)
         toolbar.addAction(eod_act)
 
-        qwk_act = QAction("QWK Metrics", self)
+        # qwk_act remains unchanged
+        qwk_icon = QIcon.fromTheme("accessories-calculator")
+        qwk_act = QAction(qwk_icon, "QWK Metrics", self)
+        qwk_act.setToolTip("Calculate QWK Metrics")
         qwk_act.triggered.connect(self.calculate_qwk)
         toolbar.addAction(qwk_act)
 
@@ -96,15 +103,16 @@ class MainWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         toolbar.addWidget(spacer)
 
-        # Add configuration option with a gear icon that triggers edit_config()
-        config_icon = QIcon.fromTheme("preferences-system")
+        config_icon = QIcon.fromTheme(QIcon.ThemeIcon.DocumentProperties)
         config_act = QAction(config_icon, "Config", self)
+        config_act.setToolTip("Edit Configuration")
         config_act.triggered.connect(self.edit_config)
         toolbar.addAction(config_act)
 
     def _createCentralWidget(self):
-        # Set an empty central widget initially.
+        # Set an empty central widget as a QTabWidget and allow tabs to be moved via drag-and-drop.
         tab_widget = QTabWidget()
+        tab_widget.setMovable(True)  # enable tab reordering by dragging
         self.setCentralWidget(tab_widget)
 
     def create_table_widget(self, headers: list, rows: list) -> CopyableTableWidget:
