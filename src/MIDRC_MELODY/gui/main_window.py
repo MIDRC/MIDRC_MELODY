@@ -58,13 +58,13 @@ class MainWindow(QMainWindow):
         self.resize(1200, 600)  # Set default size to 800x600
         self.setWindowTitle("Melody GUI")
         self.threadpool = QThreadPool()   # New thread pool for background work
-        self._createMenuBar()
-        self._createToolBar()
-        self._createCentralWidget()
+        self._create_menu_bar()
+        self._create_tool_bar()
+        self._create_central_widget()
         self.progress_view: QPlainTextEdit = QPlainTextEdit()  # Holds a QPlainTextEdit for live progress
         self._ansi = None  # Will hold the ANSIProcessor for live progress
 
-    def _createMenuBar(self):
+    def _create_menu_bar(self):
         menu_bar = self.menuBar()
 
         # New File menu with Load Config File option
@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
         edit_config_act.triggered.connect(self.edit_config)
         config_menu.addAction(edit_config_act)
 
-    def _createToolBar(self):
+    def _create_tool_bar(self):
         toolbar = QToolBar("Main Toolbar")
         toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)  # Show both icon and text
         self.addToolBar(toolbar)
@@ -108,13 +108,14 @@ class MainWindow(QMainWindow):
         config_act.triggered.connect(self.edit_config)
         toolbar.addAction(config_act)
 
-    def _createCentralWidget(self):
+    def _create_central_widget(self):
         # Set an empty central widget as a QTabWidget and allow tabs to be moved via drag-and-drop.
         tab_widget = QTabWidget()
         tab_widget.setMovable(True)  # enable tab reordering by dragging
         self.setCentralWidget(tab_widget)
 
-    def create_table_widget(self, headers: list, rows: list) -> CopyableTableWidget:
+    @staticmethod
+    def create_table_widget(headers: list, rows: list) -> CopyableTableWidget:
         """
         rows is a list of tuples: (row_data: list of str, row_color: QColor or None)
         If row_color is provided, the entire row will be set bold and colored.
@@ -208,7 +209,8 @@ class MainWindow(QMainWindow):
             if editor.exec() == QDialog.Accepted:
                 self.save_config_dict(config)
 
-    def load_config_dict(self) -> dict:
+    @staticmethod
+    def load_config_dict() -> dict:
         # Load config settings from QSettings or fallback to config.yaml
         settings = QSettings("MIDRC", "MIDRC-MELODY")
         config_str = settings.value("config", "")
@@ -241,7 +243,8 @@ class MainWindow(QMainWindow):
 
         return config
 
-    def save_config_dict(self, config: dict) -> None:
+    @staticmethod
+    def save_config_dict(config: dict) -> None:
         settings = QSettings("MIDRC", "MIDRC-MELODY")
         settings.setValue("config", json.dumps(config))
 
@@ -275,7 +278,8 @@ class MainWindow(QMainWindow):
         if set_current:
             tab_widget.setCurrentIndex(1)  # Switch to the first tab with results.
 
-    def create_spider_plot_from_qwk(self, delta_kappas, test_cols, plot_config=None) -> QTabWidget:
+    @staticmethod
+    def create_spider_plot_from_qwk(delta_kappas, test_cols, plot_config=None) -> QTabWidget:
         # Remove updating tabs here; instead, return the charts tab widget.
         plot_data_list = create_spider_plot_data_qwk(delta_kappas, test_cols, plot_config=plot_config)
         charts_tab = display_spider_charts_in_tabs(plot_data_list)
@@ -348,7 +352,8 @@ class MainWindow(QMainWindow):
         }
         self.update_tabs(tabs)
 
-    def create_spider_plot_from_eod_aaod(self, eod_aaod, test_cols, plot_config=None, *, metrics=('eod', 'aaod')) -> List[QTabWidget]:
+    @staticmethod
+    def create_spider_plot_from_eod_aaod(eod_aaod, test_cols, plot_config=None, *, metrics=('eod', 'aaod')) -> List[QTabWidget]:
         plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)
         base_plot_data = SpiderPlotData(ylim_max=global_max, ylim_min=global_min, plot_config=plot_config)
         plot_data_list = create_spider_plot_data_eod_aaod(plot_data_dict, test_cols, metrics, base_plot_data)
