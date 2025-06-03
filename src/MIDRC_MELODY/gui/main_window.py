@@ -13,95 +13,118 @@
 #      limitations under the License.
 #
 
-from contextlib import ExitStack, redirect_stderr, redirect_stdout
 import json
 import os
-import sys
-from typing import cast, Dict, List
+from typing import Dict, List
 
-from PySide6.QtCore import QSettings, Qt, QThreadPool, Slot
-from PySide6.QtGui import QAction, QBrush, QColor, QFontDatabase, QIcon, QTextCursor
-from PySide6.QtWidgets import (QDialog, QMainWindow, QMessageBox, QPlainTextEdit, QSizePolicy, QTableWidgetItem,
-                               QTabWidget, QToolBar, QWidget, QFileDialog)
+from PySide6.QtCore import Qt, QThreadPool, Slot
+from PySide6.QtGui import QAction, QBrush, QFontDatabase, QIcon
+from PySide6.QtWidgets import (
+    QDialog,
+    QMainWindow,
+    QMessageBox,
+    QPlainTextEdit,
+    QSizePolicy,
+    QTabWidget,
+    QWidget,
+    QFileDialog,
+    QTableWidgetItem,
+)
 import yaml
 
-# Import functions for EOD/AAOD
-from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data as build_demo_data
-from MIDRC_MELODY.common.eod_aaod_metrics import (binarize_scores, calculate_eod_aaod,
-                                                  create_spider_plot_data_eod_aaod, generate_plot_data_eod_aaod)
+# ─── Data‐loading and Metrics imports ────────────────────────────────────────────
+from MIDRC_MELODY.common.eod_aaod_metrics import (
+    create_spider_plot_data_eod_aaod,
+    generate_plot_data_eod_aaod,
+)
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
-from MIDRC_MELODY.common.table_tools import build_eod_aaod_tables_gui, GLOBAL_COLORS as GLOBAL_COLORS
-# Import functions for QWK
-from MIDRC_MELODY.common.qwk_metrics import (calculate_delta_kappa, calculate_kappas_and_intervals,
-                                             create_spider_plot_data_qwk)
-# Import custom classes for GUI
+
+from MIDRC_MELODY.common.qwk_metrics import (
+    create_spider_plot_data_qwk,
+)
+
+# ─── GUI‐specific imports ────────────────────────────────────────────────────────
 from MIDRC_MELODY.gui.config_editor import ConfigEditor
 from MIDRC_MELODY.gui.copyabletableview import CopyableTableWidget
 from MIDRC_MELODY.gui.plotting import display_spider_charts_in_tabs
-from MIDRC_MELODY.gui.tqdm_handler import ANSIProcessor, EmittingStream, Worker
+from MIDRC_MELODY.gui.tqdm_handler import ANSIProcessor
+
+# ←— NEW: import config functions from metrics_model
+from MIDRC_MELODY.gui.metrics_model import load_config_dict, save_config_dict
+
+# ←— NEW IMPORT: delegate toolbar actions to MainController
+from MIDRC_MELODY.gui.main_controller import MainController
 
 
-# New: custom QTableWidgetItem subclass for numeric value sorting.
 class NumericSortTableWidgetItem(QTableWidgetItem):
+    """A QTableWidgetItem that sorts numerically when its text can be parsed as float."""
     def __lt__(self, other):
         try:
-            self_data = float(self.text())
-            other_data = float(other.text())
-            return self_data < other_data
+            return float(self.text()) < float(other.text())
         except ValueError:
-            return QTableWidgetItem.__lt__(self, other)
+            return super().__lt__(other)
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.resize(1200, 600)  # Set default size to 800x600
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.resize(1200, 600)
         self.setWindowTitle("Melody GUI")
-        self.threadpool = QThreadPool()   # New thread pool for background work
+        self.threadpool = QThreadPool()
+
+        # ─── Instantiate controller and hand it this window ──────────────────────
+        self.controller = MainController(self)
+
+        # ─── Build menus, toolbar, and central widget ────────────────────────────
         self._create_menu_bar()
         self._create_tool_bar()
         self._create_central_widget()
-        self.progress_view: QPlainTextEdit = QPlainTextEdit()  # Holds a QPlainTextEdit for live progress
-        self._ansi = None  # Will hold the ANSIProcessor for live progress
+
+        # Prepare the QPlainTextEdit (progress_view) but don’t show it yet
+        self.progress_view: QPlainTextEdit = QPlainTextEdit()
+        self._ansi_processor: ANSIProcessor = None  # Lazy‐init when first appending text
 
     def _create_menu_bar(self):
         menu_bar = self.menuBar()
 
-        # New File menu with Load Config File option
+        # File → Load Config
         file_menu = menu_bar.addMenu("File")
         load_config_act = QAction("Load Config File", self)
         load_config_act.triggered.connect(self.load_config_file)
         file_menu.addAction(load_config_act)
 
-        # Existing Configuration menu
+        # Configuration → Edit Config
         config_menu = menu_bar.addMenu("Configuration")
         edit_config_act = QAction("Edit Config", self)
         edit_config_act.triggered.connect(self.edit_config)
         config_menu.addAction(edit_config_act)
 
     def _create_tool_bar(self):
-        toolbar = QToolBar("Main Toolbar")
-        toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)  # Show both icon and text
-        self.addToolBar(toolbar)
+        toolbar = self.addToolBar("MainToolbar")
+        toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
+        # EOD/AAOD Metrics button
         eod_icon = QIcon.fromTheme(QIcon.ThemeIcon.Computer)
         eod_act = QAction(eod_icon, "EOD/AAOD Metrics", self)
         eod_act.setToolTip("Calculate EOD/AAOD Metrics")
-        eod_act.triggered.connect(self.calculate_eod_aaod)
+        # ←— Now wired to controller.calculate_eod_aaod()
+        eod_act.triggered.connect(self.controller.calculate_eod_aaod)
         toolbar.addAction(eod_act)
 
-        # qwk_act remains unchanged
+        # QWK Metrics button
         qwk_icon = QIcon.fromTheme("accessories-calculator")
         qwk_act = QAction(qwk_icon, "QWK Metrics", self)
         qwk_act.setToolTip("Calculate QWK Metrics")
-        qwk_act.triggered.connect(self.calculate_qwk)
+        # ←— Now wired to controller.calculate_qwk()
+        qwk_act.triggered.connect(self.controller.calculate_qwk)
         toolbar.addAction(qwk_act)
 
-        # Add spacer widget to push the configuration option to the right
+        # Spacer pushes “Config” button to the right
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         toolbar.addWidget(spacer)
 
+        # Config button (duplicate of menu option)
         config_icon = QIcon.fromTheme(QIcon.ThemeIcon.DocumentProperties)
         config_act = QAction(config_icon, "Config", self)
         config_act.setToolTip("Edit Configuration")
@@ -109,241 +132,228 @@ class MainWindow(QMainWindow):
         toolbar.addAction(config_act)
 
     def _create_central_widget(self):
-        # Set an empty central widget as a QTabWidget and allow tabs to be moved via drag-and-drop.
+        """
+        The central widget is a QTabWidget. Tab #0 will hold the progress view
+        when computing; subsequent tabs will hold result tables and charts.
+        """
         tab_widget = QTabWidget()
-        tab_widget.setMovable(True)  # enable tab reordering by dragging
+        tab_widget.setMovable(True)
         self.setCentralWidget(tab_widget)
 
+    @Slot()
+    def load_config_file(self):
+        """
+        Load configuration from QSettings; if none exists, prompt user to pick a file.
+        """
+        try:
+            _ = load_config_dict()
+            QMessageBox.information(self, "Config Loaded", "Configuration loaded from QSettings.")
+        except Exception:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select Config File",
+                os.path.expanduser("~"),
+                "Config Files (*.yaml *.json);;All Files (*)",
+            )
+            if file_path:
+                try:
+                    if file_path.endswith(".json"):
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            config = json.load(f)
+                    else:
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            config = yaml.load(f, Loader=yaml.CLoader)
+                    save_config_dict(config)
+                    QMessageBox.information(self, "Config Loaded", "Configuration loaded from file.")
+                except Exception as e2:
+                    QMessageBox.critical(self, "Error", f"Failed to load selected config file:\n{e2}")
+            else:
+                QMessageBox.critical(self, "Error", "No config file selected.")
+
+    @Slot()
+    def edit_config(self):
+        """
+        Open the ConfigEditor on the current config; save if user accepts.
+        """
+        try:
+            config = load_config_dict()
+            editor = ConfigEditor(config, parent=self)
+            if editor.exec() == QDialog.Accepted:
+                save_config_dict(config)
+        except Exception as e:
+            resp = QMessageBox.question(
+                self,
+                "Edit Config",
+                f"Failed to load config: {e}\n\n"
+                "Select an existing config file (Yes), or create a blank config (No)?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if resp == QMessageBox.Yes:
+                file_path, _ = QFileDialog.getOpenFileName(
+                    self,
+                    "Select Config File",
+                    os.path.expanduser("~"),
+                    "Config Files (*.yaml *.json);;All Files (*)",
+                )
+                if file_path:
+                    try:
+                        if file_path.endswith(".json"):
+                            with open(file_path, "r", encoding="utf-8") as f:
+                                config = json.load(f)
+                        else:
+                            with open(file_path, "r", encoding="utf-8") as f:
+                                config = yaml.load(f, Loader=yaml.CLoader)
+                        save_config_dict(config)
+                    except Exception as e3:
+                        QMessageBox.critical(self, "Error", f"Failed to load selected config file:\n{e3}")
+                        return
+                else:
+                    QMessageBox.critical(self, "Error", "No config file selected.")
+                    return
+            else:
+                config = {}  # start blank
+            editor = ConfigEditor(config, parent=self)
+            if editor.exec() == QDialog.Accepted:
+                save_config_dict(config)
+
+    def show_progress_view(self):
+        """
+        Insert (or re-insert) a read-only console tab (QPlainTextEdit) at index 0
+        so that any redirected print() output appears there.
+        """
+        if not self.progress_view:
+            self.progress_view = QPlainTextEdit()
+        self.progress_view.setReadOnly(True)
+        fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        fixed.setPointSize(10)
+        self.progress_view.setFont(fixed)
+        self.progress_view.setLineWrapMode(QPlainTextEdit.NoWrap)
+
+        tabs: QTabWidget = self.centralWidget()
+        # Remove any existing “Progress Output” tab
+        for i in range(tabs.count()):
+            if tabs.tabText(i) == "Progress Output":
+                tabs.removeTab(i)
+                break
+
+        tabs.insertTab(0, self.progress_view, "Progress Output")
+        tabs.setCurrentIndex(0)
+
+    def append_progress(self, text: str) -> None:
+        """
+        Feed each chunk of emitted text through ANSIProcessor so colors/formatting appear.
+        """
+        if not self._ansi_processor:
+            self._ansi_processor = ANSIProcessor()
+        self._ansi_processor.process(self.progress_view, text)
+
+    def update_tabs(self, tab_dict: Dict[QWidget, str], *, set_current=True):
+        """
+        Given a dict {widget: tab_title}, remove any existing tabs with those titles,
+        then insert each new tab at index 1 (leaving index 0 for the progress view).
+        """
+        tab_widget: QTabWidget = self.centralWidget()
+        # Remove tabs whose title matches any in tab_dict.values()
+        for i in reversed(range(tab_widget.count())):
+            if tab_widget.tabText(i) in tab_dict.values():
+                tab_widget.removeTab(i)
+        # Insert new tabs, starting at index=1
+        for idx, (widget, title) in enumerate(tab_dict.items(), start=1):
+            tab_widget.insertTab(idx, widget, title)
+        if set_current:
+            tab_widget.setCurrentIndex(1)
+
     @staticmethod
-    def create_table_widget(headers: list, rows: list) -> CopyableTableWidget:
+    def create_table_widget(headers: List[str], rows: List):
         """
-        rows is a list of tuples: (row_data: list of str, row_color: QColor or None)
-        If row_color is provided, the entire row will be set bold and colored.
-        The table will be sortable via clickable headers.
+        Build a CopyableTableWidget with the given headers and rows.
+        rows is a List of (row_data: List[str], row_color: QColor or None).
+        If row_color is not None, the final three columns in that row are colored + bold.
         """
-        table = CopyableTableWidget()  # Using custom CopyableTableWidget
+        table = CopyableTableWidget()
         table.setSortingEnabled(True)
         table.setColumnCount(len(headers))
         table.setHorizontalHeaderLabels(headers)
         table.setRowCount(len(rows))
+
         for r, (row_data, row_color) in enumerate(rows):
             for c, cell in enumerate(row_data):
-                # If the cell can be converted to a float, use NumericSortTableWidgetItem.
+                # Numeric‐sort if convertible to float
                 try:
                     float(cell)
                     item = NumericSortTableWidgetItem(cell)
                 except ValueError:
                     item = QTableWidgetItem(cell)
 
-                # Update the color of the median, lower CI, and upper CI columns if row_color is provided.
-                if c >= len(row_data) - 3 and row_color is not None:
+                # If a color is provided, apply to last three columns
+                if row_color is not None and c >= len(row_data) - 3:
                     item.setForeground(QBrush(row_color))
                     font = item.font()
                     font.setBold(True)
                     item.setFont(font)
+
                 table.setItem(r, c, item)
+
         table.resizeColumnsToContents()
         return table
 
-    @Slot()
-    def load_config_file(self):
-        try:
-            _ = self.load_config_dict()
-            QMessageBox.information(self, "Config Loaded", "Configuration settings loaded from QSettings.")
-        except Exception as e:
-            # Open file dialog to select an existing config file
-            file_path, _ = QFileDialog.getOpenFileName(self, "Select Config File", os.path.expanduser("~"),
-                                                       "Config Files (*.yaml *.json);;All Files (*)")
-            if file_path:
-                try:
-                    if file_path.endswith('.json'):
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            config = json.load(f)
-                    else:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            config = yaml.load(f, Loader=yaml.CLoader)
-                    settings = QSettings("MIDRC", "MIDRC-MELODY")
-                    settings.setValue("config", json.dumps(config))
-                    QMessageBox.information(self, "Config Loaded", "Configuration loaded from file.")
-                except Exception as e2:
-                    QMessageBox.critical(self, "Error", f"Failed to load selected config file: {e2}")
-            else:
-                QMessageBox.critical(self, "Error", "No config file selected.")
-
-    @Slot()
-    def edit_config(self):
-        try:
-            config = self.load_config_dict()
-            editor = ConfigEditor(config, parent=self)
-            if editor.exec() == QDialog.Accepted:
-                self.save_config_dict(config)
-        except Exception as e:
-            # Ask the user whether to select a config file or use a blank config
-            resp = QMessageBox.question(self, "Edit Config",
-                                        f"Failed to load config: {e}\n\nWould you like to select an existing config file?\n"
-                                        "Press Yes to select a file; or No to create a blank config.",
-                                        QMessageBox.Yes | QMessageBox.No)
-            if resp == QMessageBox.Yes:
-                file_path, _ = QFileDialog.getOpenFileName(self, "Select Config File", os.path.expanduser("~"),
-                                                           "Config Files (*.yaml *.json);;All Files (*)")
-                if file_path:
-                    try:
-                        if file_path.endswith('.json'):
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                config = json.load(f)
-                        else:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                config = yaml.load(f, Loader=yaml.CLoader)
-                        settings = QSettings("MIDRC", "MIDRC-MELODY")
-                        settings.setValue("config", json.dumps(config))
-                    except Exception as e3:
-                        QMessageBox.critical(self, "Error", f"Failed to load selected config file: {e3}")
-                        return
-                else:
-                    QMessageBox.critical(self, "Error", "No config file selected.")
-                    return
-            else:
-                config = {}  # Create a blank config dictionary
-            # Open editor with the obtained config
-            editor = ConfigEditor(config, parent=self)
-            if editor.exec() == QDialog.Accepted:
-                self.save_config_dict(config)
-
-    @staticmethod
-    def load_config_dict() -> dict:
-        # Load config settings from QSettings or fallback to config.yaml
-        settings = QSettings("MIDRC", "MIDRC-MELODY")
-        config_str = settings.value("config", "")
-        if config_str:
-            config = json.loads(config_str)
-        else:
-            config_path = os.path.join(os.path.dirname(__file__), "..", "..", '..', "config.yaml")
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = yaml.load(f, Loader=yaml.CLoader)
-            settings.setValue("config", json.dumps(config))
-
-        # Post-process numeric_cols bins: convert ".inf" to float("inf")
-        if "numeric_cols" in config:
-            for col, d in config["numeric_cols"].items():
-                if "bins" in d:
-                    processed_bins = []
-                    for b in d["bins"]:
-                        if isinstance(b, (int, float)):
-                            processed_bins.append(b)
-                        else:
-                            try:
-                                # Convert ".inf" or "inf" strings to float("inf")
-                                if b.strip() in [".inf", "inf"]:
-                                    processed_bins.append(float("inf"))
-                                else:
-                                    processed_bins.append(float(b))
-                            except Exception:
-                                processed_bins.append(b)
-                    config["numeric_cols"][col]["bins"] = processed_bins
-
-        return config
-
-    @staticmethod
-    def save_config_dict(config: dict) -> None:
-        settings = QSettings("MIDRC", "MIDRC-MELODY")
-        settings.setValue("config", json.dumps(config))
-
-    def show_progress_view(self):
-        """Replace the central widget with a progress view to display live console output."""
-        if not self.progress_view:
-            self.progress_view = QPlainTextEdit()
-        self.progress_view.setReadOnly(True)
-        fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)  # platform-native mono
-        fixed.setPointSize(10)  # pick a size you like
-        self.progress_view.setFont(fixed)
-        self.progress_view.setLineWrapMode(QPlainTextEdit.NoWrap)
-        # No longer instantiate ANSIProcessor; we'll use its static function instead.
-        progress_tabs: QTabWidget = cast(QTabWidget, self.centralWidget())
-        progress_tabs.insertTab(0, self.progress_view, "Progress Output")
-        progress_tabs.setCurrentIndex(0)
-
-    def append_progress(self, text: str) -> None:
-        # Use ANSIProcessor.process() as a static function to update the progress_view.
-        ANSIProcessor.process(self.progress_view, text)
-
-    def update_tabs(self, tab_dict, *, set_current=True):
-        tab_widget: QTabWidget = cast(QTabWidget, self.centralWidget())
-        # Remove existing tabs that match the names in tab_dict.
-        for i in reversed(range(tab_widget.count())):
-            if tab_widget.tabText(i) in tab_dict.values():
-                tab_widget.removeTab(i)
-        # Add new tabs based on the provided tab_dict starting at index 1.
-        for index, (tab, tab_name) in enumerate(tab_dict.items(), start=1):
-            tab_widget.insertTab(index, tab, tab_name)
-        if set_current:
-            tab_widget.setCurrentIndex(1)  # Switch to the first tab with results.
-
     @staticmethod
     def create_spider_plot_from_qwk(delta_kappas, test_cols, plot_config=None) -> QTabWidget:
-        # Remove updating tabs here; instead, return the charts tab widget.
+        """
+        Given (delta_kappas: dict, test_cols: List[str], plot_config: dict),
+        build spider‐chart(s) for QWK and return a QTabWidget containing them.
+        """
         plot_data_list = create_spider_plot_data_qwk(delta_kappas, test_cols, plot_config=plot_config)
-        charts_tab = display_spider_charts_in_tabs(plot_data_list)
-        return charts_tab
+        return display_spider_charts_in_tabs(plot_data_list)
 
-    def compute_qwk(self, config: dict):
-        # Save the original streams
-        original_stdout = sys.stdout
-        original_stderr = sys.stderr
+    @staticmethod
+    def create_spider_plot_from_eod_aaod(
+        eod_aaod, test_cols, plot_config=None, *, metrics=("eod", "aaod")
+    ) -> List[QTabWidget]:
+        """
+        Given (eod_aaod: dict, test_cols: List[str], plot_config: dict),
+        build one or more spider‐chart tabs (one per metric) and return them.
+        """
+        plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(
+            eod_aaod, test_cols, metrics=metrics
+        )
+        base_data = SpiderPlotData(ylim_max=global_max, ylim_min=global_min, plot_config=plot_config)
+        plot_data_list = create_spider_plot_data_eod_aaod(plot_data_dict, test_cols, metrics, base_data)
 
-        # Create an EmittingStream and connect its textWritten signal.
-        stream = EmittingStream()
-        stream.textWritten.connect(self.append_progress)  # using queued connection if needed
-        with ExitStack() as es:
-            es.enter_context(redirect_stdout(stream))
-            es.enter_context(redirect_stderr(stream))
-            if not self.progress_view.document().isEmpty():
-                # Move cursor to the end of the progress view.
-                self.progress_view.moveCursor(QTextCursor.End)
-                print('\n', '-'*115, '\n')
-            print('Computing QWK metrics...')
-            # Build test data once.
-            test_data = build_demo_data(config)
-            # Calculate delta kappas for subgroup comparisons.
-            delta_kappas = calculate_delta_kappa(test_data)
-            all_rows = []
-            filtered_rows = []
-            maroon = QColor(*GLOBAL_COLORS['kappa_negative'])
-            green = QColor(*GLOBAL_COLORS['kappa_positive'])
-            for category, model_data in delta_kappas.items():
-                for model, groups in model_data.items():
-                    for group, (delta, (lower_ci, upper_ci)) in groups.items():
-                        qualifies = (lower_ci > 0 or upper_ci < 0)
-                        color = green if qualifies and delta >= 0 else (maroon if qualifies and delta < 0 else None)
-                        row = [model, category, group, f"{delta:.4f}", f"{lower_ci:.4f}", f"{upper_ci:.4f}"]
-                        all_rows.append((row, color))
-                        if qualifies:
-                            filtered_rows.append((row, color))
-            # Additionally, calculate overall kappas and intervals.
-            kappas, intervals = calculate_kappas_and_intervals(test_data)
-            kappas_rows = []
-            for model in sorted(kappas.keys()):
-                row = [model, f"{kappas[model]:.4f}", f"{intervals[model][0]:.4f}", f"{intervals[model][1]:.4f}"]
-                kappas_rows.append((row, None))
-            print(f"Computed {len(all_rows)} delta κ values, {len(filtered_rows)} filtered rows, and {len(kappas_rows)} kappas.")
+        chart_tabs: List[QTabWidget] = []
+        temp: Dict[str, List[SpiderPlotData]] = {}
+        for pd in plot_data_list:
+            temp.setdefault(pd.metric, []).append(pd)
 
-        # Restore original stdout and stderr
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
+        for metric, data_list in temp.items():
+            tw = display_spider_charts_in_tabs(data_list)
+            tw.setObjectName(f"{metric.upper()} Spider Charts")
+            chart_tabs.append(tw)
 
-        # Remove UI creation from worker thread; instead, return additional values.
-        return all_rows, filtered_rows, kappas_rows, (delta_kappas, test_data.test_cols, config['plot'])
+        return chart_tabs
 
     def update_qwk_tables(self, result):
-        # Unpack the results from compute_qwk().
-        delta_all, delta_filtered, kappas_rows, plot_args = result
-        headers_delta = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper UI"]
-        table_all = self.create_table_widget(headers_delta, delta_all)
-        table_filtered = self.create_table_widget(headers_delta, delta_filtered)
+        """
+        Called by MainController when QWK worker finishes.
+        Expect result = (all_rows, filtered_rows, kappas_rows, plot_args).
+        Build three tables + a spider‐chart tab, then insert into QTabWidget.
+        """
+        all_rows, filtered_rows, kappas_rows, plot_args = result
+
+        # Table of all delta‐κ values
+        headers_delta = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
+        table_all = self.create_table_widget(headers_delta, all_rows)
+
+        # Table of filtered delta‐κ values
+        table_filtered = self.create_table_widget(headers_delta, filtered_rows)
+
+        # Table of overall kappa metrics
         headers_kappas = ["Model", "Kappa", "Lower CI", "Upper CI"]
         table_kappas = self.create_table_widget(headers_kappas, kappas_rows)
-        # Create charts tab on the main thread.
+
+        # Spider‐chart tab for QWK
         charts_tab = self.create_spider_plot_from_qwk(*plot_args)
-        # Prepare tabs dictionary, including the charts tab.
+
         tabs = {
             table_kappas: "Kappas & Intervals",
             table_all: "All Delta κ Values",
@@ -352,97 +362,35 @@ class MainWindow(QMainWindow):
         }
         self.update_tabs(tabs)
 
-    @staticmethod
-    def create_spider_plot_from_eod_aaod(eod_aaod, test_cols, plot_config=None, *, metrics=('eod', 'aaod')) -> List[QTabWidget]:
-        plot_data_dict, global_min, global_max = generate_plot_data_eod_aaod(eod_aaod, test_cols, metrics=metrics)
-        base_plot_data = SpiderPlotData(ylim_max=global_max, ylim_min=global_min, plot_config=plot_config)
-        plot_data_list = create_spider_plot_data_eod_aaod(plot_data_dict, test_cols, metrics, base_plot_data)
-        chart_data: Dict[str, List[SpiderPlotData]] = {}
-        for plot_data in plot_data_list:
-            # Use the metric name as the key for the charts tab.
-            metric = plot_data.metric
-            if metric not in chart_data:
-                chart_data[metric] = []
-            chart_data[metric].append(plot_data)
-
-        chart_tabs: List[QTabWidget] = []
-        for chart, data in chart_data.items():
-            chart_tabs.append(display_spider_charts_in_tabs(data))
-            chart_tabs[-1].setObjectName(f"{chart.upper()} Spider Charts")
-
-        return chart_tabs
-
-    def compute_eod_aaod(self, config: dict):
-        # Save the original streams
-        original_stdout = sys.stdout
-        original_stderr = sys.stderr
-
-        # Create an EmittingStream and connect its textWritten signal using a queued connection.
-        stream = EmittingStream()
-        stream.textWritten.connect(self.append_progress)  # UPDATED
-        with ExitStack() as es:
-            es.enter_context(redirect_stdout(stream))
-            es.enter_context(redirect_stderr(stream))
-            if not self.progress_view.document().isEmpty():
-                # Move cursor to the end of the progress view.
-                self.progress_view.moveCursor(QTextCursor.End)
-                print('\n', '-'*115, '\n')
-            print('Computing EOD/AAOD metrics...')
-            t_data = build_demo_data(config)
-            threshold = config['binary threshold']
-            matched_df = binarize_scores(t_data.matched_df, t_data.truth_col, t_data.test_cols, threshold=threshold)
-            from dataclasses import replace
-            test_data = replace(t_data, matched_df=matched_df)
-            eod_aaod = calculate_eod_aaod(test_data)
-            print(f"Computed EOD/AAOD metrics for {len(eod_aaod)} models with binary threshold {threshold}.")
-
-        # Restore original stdout and stderr
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
-
-        tables = build_eod_aaod_tables_gui(eod_aaod)
-        return *tables, (eod_aaod, test_data.test_cols, config['plot'])
-
-    @Slot()
-    def calculate_eod_aaod(self):
-        try:
-            config = self.load_config_dict()
-            self.show_progress_view()
-            worker = Worker(self.compute_eod_aaod, config)
-            worker.signals.result.connect(self.update_eod_aaod_tables)
-            worker.signals.error.connect(lambda e:
-                                         QMessageBox.critical(self, "Error", f"Error in EOD/AAOD Metrics: {e}"))
-            self.threadpool.start(worker)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error in EOD/AAOD Metrics: {e}")
-
     def update_eod_aaod_tables(self, result):
+        """
+        Called by MainController when EOD/AAOD worker finishes.
+        Expect result = (all_eod_rows, all_aaod_rows, filtered_rows, plot_args).
+        Build two tables + filtered table + spider‐chart tabs, then insert into QTabWidget.
+        """
         all_eod_rows, all_aaod_rows, filtered_rows, plot_args = result
+
+        # Table of all EOD values
         headers = ["Model", "Category", "Group", "Median", "Lower CI", "Upper CI"]
         table_all_eod = self.create_table_widget(headers, all_eod_rows)
+
+        # Table of all AAOD values
         table_all_aaod = self.create_table_widget(headers, all_aaod_rows)
-        headers.insert(3, "Metric")  # Insert "Metric" column header
-        table_filtered = self.create_table_widget(headers, filtered_rows)
-        # Create charts tab on the main thread.
+
+        # Filtered table with an extra “Metric” column inserted at index 3
+        filt_headers = headers.copy()
+        filt_headers.insert(3, "Metric")
+        table_filtered = self.create_table_widget(filt_headers, filtered_rows)
+
+        # One or more spider‐chart tabs for EOD/AAOD
         chart_tabs = self.create_spider_plot_from_eod_aaod(*plot_args)
+
         tabs: Dict[QWidget, str] = {
             table_all_eod: "All EOD Values",
             table_all_aaod: "All AAOD Values",
             table_filtered: r"EOD/AAOD Filtered (values outside [-0.1, 0.1])",
         }
-        for chart_tab in chart_tabs:
-            tabs[chart_tab] = chart_tab.objectName()
-        self.update_tabs(tabs)
+        for ct in chart_tabs:
+            tabs[ct] = ct.objectName()
 
-    @Slot()
-    def calculate_qwk(self):
-        try:
-            config = self.load_config_dict()
-            # Show progress view before starting work.
-            self.show_progress_view()
-            worker = Worker(self.compute_qwk, config)
-            worker.signals.result.connect(self.update_qwk_tables)
-            worker.signals.error.connect(lambda e: QMessageBox.critical(self, "Error", f"Error in QWK Metrics: {e}"))
-            self.threadpool.start(worker)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error in QWK Metrics: {e}")
+        self.update_tabs(tabs)
