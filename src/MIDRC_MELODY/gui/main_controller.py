@@ -3,10 +3,11 @@ import time
 from contextlib import ExitStack, redirect_stdout, redirect_stderr
 
 from PySide6.QtWidgets import QMessageBox
+from PySide6.QtGui import QTextCursor
 
 from MIDRC_MELODY.gui.data_loading import load_config_dict, build_demo_data_wrapper
 from MIDRC_MELODY.gui.metrics_model import compute_qwk_metrics, compute_eod_aaod_metrics
-from MIDRC_MELODY.gui.tqdm_handler import Worker, EmittingStream  # make sure EmittingStream is importable
+from MIDRC_MELODY.gui.tqdm_handler import Worker, EmittingStream
 
 
 class MainController:
@@ -15,127 +16,122 @@ class MainController:
 
     def calculate_qwk(self):
         """
-        Entry point triggered by the toolbar button.  This will:
-         1) load the config
-         2) show the progress view
-         3) spin up a Worker that (a) redirects print() → EmittingStream → GUI, then
-            calls compute_qwk_metrics(…) and returns that result
-         4) when the worker finishes, send its result into main_window.update_qwk_tables(...)
+        Triggered by the “QWK Metrics” toolbar button.  Loads config, shows the progress view,
+        and spins up a Worker that captures print() → GUI and calls compute_qwk_metrics.
         """
         try:
             config = load_config_dict()
         except Exception as e:
-            QMessageBox.critical(self.main_window, "Error", f"Failed to load config: {e}")
+            QMessageBox.critical(self.main_window, "Error", f"Failed to load config:\n{e}")
             return
 
+        # Ensure the “Progress Output” tab is visible before the Worker starts
         self.main_window.show_progress_view()
 
-        # The actual “task” function that gets run in a background thread:
-        def _task(config_dict):
-            # 1) Save the real stdout/stderr so we can restore later
-            original_stdout = sys.stdout
-            original_stderr = sys.stderr
-
-            # 2) Create an EmittingStream and hook it up to main_window.append_progress
-            stream = EmittingStream()
-            stream.textWritten.connect(self.main_window.append_progress)
-
-            # 3) Redirect stdout/stderr → EmittingStream (so print(...) goes to GUI)
-            with ExitStack() as es:
-                es.enter_context(redirect_stdout(stream))
-                es.enter_context(redirect_stderr(stream))
-
-                # Create a timestamp to track the time taken for the computation
-                time_start = time.time()
-
-                print('-'*120,'\n')
-                print("Computing QWK metrics... "
-                      f"(Started at: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_start))})")
-
-                # 4) Build the test_data and call the actual compute_qwk_metrics
-                test_data = build_demo_data_wrapper(config_dict)
-                result = compute_qwk_metrics(test_data)
-
-                # Add blank line for better readability in the GUI output
-                print("Finished computing QWK metrics in {:.2f} seconds.".format(time.time() - time_start))
-                print()
-
-            # 5) Restore the real stdout/stderr so that any further print() goes to console
-            sys.stdout = original_stdout
-            sys.stderr = original_stderr
-
-            # 6) Return whatever compute_qwk_metrics returned
-            #    Should be a tuple: (all_rows, filtered_rows, kappas_rows, plot_args)
-            return result
-
-        # Create a Worker around our _task function.  The Worker’s "signals.result"
-        # will fire with whatever `_task(config)` returns.
-        worker = Worker(_task, config)
-        worker.signals.result.connect(self.main_window.update_qwk_tables)
-        worker.signals.error.connect(
-            lambda e: QMessageBox.critical(
-                self.main_window, "Error", f"Error in QWK Metrics:\n{e}"
-            )
+        # Create and start a Worker that wraps compute_qwk_metrics
+        worker = self._make_worker(
+            banner="QWK",
+            compute_fn=compute_qwk_metrics,
+            result_handler=self.main_window.update_qwk_tables,
+            config=config,
         )
-
-        # Finally, queue it on the threadpool
         self.main_window.threadpool.start(worker)
 
     def calculate_eod_aaod(self):
         """
-        Entry point triggered by the toolbar button.  This will:
-         1) load the config
-         2) show the progress view
-         3) spin up a Worker that (a) redirects print() → EmittingStream → GUI, then
-            calls compute_eod_aaod_metrics(…) and returns that result
-         4) when the worker finishes, send its result into main_window.update_eod_aaod_tables(...)
+        Triggered by the “EOD/AAOD Metrics” toolbar button.  Loads config, shows the progress view,
+        and spins up a Worker that captures print() → GUI and calls compute_eod_aaod_metrics.
         """
         try:
             config = load_config_dict()
         except Exception as e:
-            QMessageBox.critical(self.main_window, "Error", f"Failed to load config: {e}")
+            QMessageBox.critical(self.main_window, "Error", f"Failed to load config:\n{e}")
             return
 
         self.main_window.show_progress_view()
 
-        def _task(config_dict):
+        worker = self._make_worker(
+            banner="EOD/AAOD",
+            compute_fn=compute_eod_aaod_metrics,
+            result_handler=self.main_window.update_eod_aaod_tables,
+            config=config,
+        )
+        self.main_window.threadpool.start(worker)
+
+    def _make_worker(self, banner: str, compute_fn, result_handler, config: dict):
+        """
+        Internal helper to create a Worker that:
+         1) Redirects stdout/stderr → EmittingStream → main_window.append_progress
+         2) Prints “Computing {banner} metrics…”
+         3) Calls the appropriate compute_fn (either compute_qwk_metrics or compute_eod_aaod_metrics)
+         4) Restores stdout/stderr and returns the result
+
+        Parameters:
+        - banner:          "QWK" or "EOD/AAOD" (used in the printed banner and error dialogs)
+        - compute_fn:      either compute_qwk_metrics or compute_eod_aaod_metrics
+        - result_handler:  a slot on main_window (update_qwk_tables or update_eod_aaod_tables)
+        - config:          the loaded configuration dict
+
+        Returns:
+        - A Worker instance that, when started, will run _task(config) in a background thread.
+        """
+        def _task(cfg):
+            # 1) Save original stdout/stderr so we can restore later
             original_stdout = sys.stdout
             original_stderr = sys.stderr
 
+            # 2) Build an EmittingStream and connect its textWritten → append_progress
             stream = EmittingStream()
             stream.textWritten.connect(self.main_window.append_progress)
 
+            # 3) Redirect stdout/stderr → EmittingStream
             with ExitStack() as es:
                 es.enter_context(redirect_stdout(stream))
                 es.enter_context(redirect_stderr(stream))
 
-                # Create a timestamp to track the time taken for the computation
+                # 4) Print the initial banner
                 time_start = time.time()
+                if not self.main_window.progress_view.document().isEmpty():
+                    # Move cursor to the end of the progress view
+                    self.main_window.progress_view.moveCursor(QTextCursor.End)
+                    print('\n', '-'*140, '\n')
+                print(f"Computing {banner} metrics... "
+                      f"(Started at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_start))})")
 
-                print('-'*120,'\n')
-                print("Computing EOD/AAOD metrics... "
-                      f"(Started at: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_start))})")
+                # 5) Build test data and run the compute function
+                test_data = build_demo_data_wrapper(cfg)
+                if compute_fn is compute_eod_aaod_metrics:
+                    # EOD/AAOD needs a threshold from cfg (default to 0.5)
+                    threshold = cfg.get("binary threshold", 0.5)
+                    result = compute_fn(test_data, threshold)
+                else:
+                    # QWK just takes test_data
+                    result = compute_fn(test_data)
 
-                test_data = build_demo_data_wrapper(config_dict)
-                threshold = config_dict.get("binary threshold", 0.5)
-                result = compute_eod_aaod_metrics(test_data, threshold)
+                print(f"Finished {banner} metrics in {time.time() - time_start:.2f} seconds.")
 
-                # Print a blank line for better readability in the GUI output
-                print("Finished computing EOD/AAOD metrics in {:.2f} seconds.".format(time.time() - time_start))
-                print()
-
+            # 6) Restore original stdout/stderr so further print() goes to console
             sys.stdout = original_stdout
             sys.stderr = original_stderr
 
-            # `compute_eod_aaod_metrics` should return:
-            # (all_eod_rows, all_aaod_rows, filtered_rows, plot_args)
+            # 7) Return the computed result, e.g.
+            #    - For QWK: (all_rows, filtered_rows, kappas_rows, plot_args)
+            #    - For EOD/AAOD: (all_eod_rows, all_aaod_rows, filtered_rows, plot_args)
             return result
 
+        # Instantiate the Worker around our _task function + config dict
         worker = Worker(_task, config)
-        worker.signals.result.connect(self.main_window.update_eod_aaod_tables)
+
+        # Connect the result signal to the appropriate table‐update slot
+        worker.signals.result.connect(result_handler)
+
+        # Connect any error to a QMessageBox
         worker.signals.error.connect(
             lambda e: QMessageBox.critical(
-                self.main_window, "Error", f"Error in EOD/AAOD Metrics:\n{e}"
+                self.main_window,
+                "Error",
+                f"Error in {banner} Metrics:\n{e}"
             )
         )
-        self.main_window.threadpool.start(worker)
+
+        return worker
