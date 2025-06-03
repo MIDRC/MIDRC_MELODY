@@ -13,24 +13,18 @@
 #      limitations under the License.
 #
 
-import json
-import os
 from typing import Dict, List
 
 from PySide6.QtCore import Qt, QThreadPool, Slot
 from PySide6.QtGui import QAction, QBrush, QFontDatabase, QIcon
 from PySide6.QtWidgets import (
-    QDialog,
     QMainWindow,
-    QMessageBox,
     QPlainTextEdit,
     QSizePolicy,
     QTabWidget,
     QWidget,
-    QFileDialog,
     QTableWidgetItem,
 )
-import yaml
 
 # ─── Data‐loading and Metrics imports ────────────────────────────────────────────
 from MIDRC_MELODY.common.eod_aaod_metrics import (
@@ -44,15 +38,11 @@ from MIDRC_MELODY.common.qwk_metrics import (
 )
 
 # ─── GUI‐specific imports ────────────────────────────────────────────────────────
-from MIDRC_MELODY.gui.config_editor import ConfigEditor
 from MIDRC_MELODY.gui.copyabletableview import CopyableTableWidget
 from MIDRC_MELODY.gui.plotting import display_spider_charts_in_tabs
 from MIDRC_MELODY.gui.tqdm_handler import ANSIProcessor
 
-# ←— NEW: import config functions from metrics_model
-from MIDRC_MELODY.gui.metrics_model import load_config_dict, save_config_dict
-
-# ←— NEW IMPORT: delegate toolbar actions to MainController
+from MIDRC_MELODY.gui.data_loading import load_config_file, edit_config_file
 from MIDRC_MELODY.gui.main_controller import MainController
 
 
@@ -142,79 +132,13 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def load_config_file(self):
-        """
-        Load configuration from QSettings; if none exists, prompt user to pick a file.
-        """
-        try:
-            _ = load_config_dict()
-            QMessageBox.information(self, "Config Loaded", "Configuration loaded from QSettings.")
-        except Exception:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self,
-                "Select Config File",
-                os.path.expanduser("~"),
-                "Config Files (*.yaml *.json);;All Files (*)",
-            )
-            if file_path:
-                try:
-                    if file_path.endswith(".json"):
-                        with open(file_path, "r", encoding="utf-8") as f:
-                            config = json.load(f)
-                    else:
-                        with open(file_path, "r", encoding="utf-8") as f:
-                            config = yaml.load(f, Loader=yaml.CLoader)
-                    save_config_dict(config)
-                    QMessageBox.information(self, "Config Loaded", "Configuration loaded from file.")
-                except Exception as e2:
-                    QMessageBox.critical(self, "Error", f"Failed to load selected config file:\n{e2}")
-            else:
-                QMessageBox.critical(self, "Error", "No config file selected.")
+        # Delegate to data_loading.load_config_file()
+        load_config_file(self)
 
     @Slot()
     def edit_config(self):
-        """
-        Open the ConfigEditor on the current config; save if user accepts.
-        """
-        try:
-            config = load_config_dict()
-            editor = ConfigEditor(config, parent=self)
-            if editor.exec() == QDialog.Accepted:
-                save_config_dict(config)
-        except Exception as e:
-            resp = QMessageBox.question(
-                self,
-                "Edit Config",
-                f"Failed to load config: {e}\n\n"
-                "Select an existing config file (Yes), or create a blank config (No)?",
-                QMessageBox.Yes | QMessageBox.No,
-            )
-            if resp == QMessageBox.Yes:
-                file_path, _ = QFileDialog.getOpenFileName(
-                    self,
-                    "Select Config File",
-                    os.path.expanduser("~"),
-                    "Config Files (*.yaml *.json);;All Files (*)",
-                )
-                if file_path:
-                    try:
-                        if file_path.endswith(".json"):
-                            with open(file_path, "r", encoding="utf-8") as f:
-                                config = json.load(f)
-                        else:
-                            with open(file_path, "r", encoding="utf-8") as f:
-                                config = yaml.load(f, Loader=yaml.CLoader)
-                        save_config_dict(config)
-                    except Exception as e3:
-                        QMessageBox.critical(self, "Error", f"Failed to load selected config file:\n{e3}")
-                        return
-                else:
-                    QMessageBox.critical(self, "Error", "No config file selected.")
-                    return
-            else:
-                config = {}  # start blank
-            editor = ConfigEditor(config, parent=self)
-            if editor.exec() == QDialog.Accepted:
-                save_config_dict(config)
+        # Delegate to data_loading.edit_config_file()
+        edit_config_file(self)
 
     def show_progress_view(self):
         """

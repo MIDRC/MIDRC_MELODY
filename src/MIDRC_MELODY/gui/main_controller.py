@@ -1,14 +1,11 @@
 import sys
+import time
 from contextlib import ExitStack, redirect_stdout, redirect_stderr
 
 from PySide6.QtWidgets import QMessageBox
 
-from MIDRC_MELODY.gui.metrics_model import (
-    load_config_dict,
-    build_demo_data_wrapper,
-    compute_qwk_metrics,
-    compute_eod_aaod_metrics,
-)
+from MIDRC_MELODY.gui.data_loading import load_config_dict, build_demo_data_wrapper
+from MIDRC_MELODY.gui.metrics_model import compute_qwk_metrics, compute_eod_aaod_metrics
 from MIDRC_MELODY.gui.tqdm_handler import Worker, EmittingStream  # make sure EmittingStream is importable
 
 
@@ -48,15 +45,20 @@ class MainController:
                 es.enter_context(redirect_stdout(stream))
                 es.enter_context(redirect_stderr(stream))
 
-                # Optional: you can print a banner or timestamp:
-                print("Computing QWK metrics...")
+                # Create a timestamp to track the time taken for the computation
+                time_start = time.time()
+
+                print('-'*120,'\n')
+                print("Computing QWK metrics... "
+                      f"(Started at: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_start))})")
 
                 # 4) Build the test_data and call the actual compute_qwk_metrics
                 test_data = build_demo_data_wrapper(config_dict)
                 result = compute_qwk_metrics(test_data)
 
-            # Add blank line for better readability in the GUI output
-            print()
+                # Add blank line for better readability in the GUI output
+                print("Finished computing QWK metrics in {:.2f} seconds.".format(time.time() - time_start))
+                print()
 
             # 5) Restore the real stdout/stderr so that any further print() goes to console
             sys.stdout = original_stdout
@@ -107,11 +109,20 @@ class MainController:
                 es.enter_context(redirect_stdout(stream))
                 es.enter_context(redirect_stderr(stream))
 
-                print("Computing EOD/AAOD metrics...")
+                # Create a timestamp to track the time taken for the computation
+                time_start = time.time()
+
+                print('-'*120,'\n')
+                print("Computing EOD/AAOD metrics... "
+                      f"(Started at: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_start))})")
 
                 test_data = build_demo_data_wrapper(config_dict)
                 threshold = config_dict.get("binary threshold", 0.5)
                 result = compute_eod_aaod_metrics(test_data, threshold)
+
+                # Print a blank line for better readability in the GUI output
+                print("Finished computing EOD/AAOD metrics in {:.2f} seconds.".format(time.time() - time_start))
+                print()
 
             sys.stdout = original_stdout
             sys.stderr = original_stderr
@@ -119,9 +130,6 @@ class MainController:
             # `compute_eod_aaod_metrics` should return:
             # (all_eod_rows, all_aaod_rows, filtered_rows, plot_args)
             return result
-
-        # Print a blank line for better readability in the GUI output
-        print()
 
         worker = Worker(_task, config)
         worker.signals.result.connect(self.main_window.update_eod_aaod_tables)
