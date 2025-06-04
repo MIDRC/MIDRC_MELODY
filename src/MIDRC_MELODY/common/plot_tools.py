@@ -87,9 +87,6 @@ def prepare_and_sort(plot_data: SpiderPlotData) -> Tuple[List[str], List[float],
         # Other items sort after custom-ordered, by string label
         return (len(attributes), label)
 
-    print('groups unsorted:', plot_data.groups)
-    print('groups sorted:', sorted(plot_data.groups, key=lambda x: sort_key(x)))
-
     zipped = list(zip(
         plot_data.groups,
         plot_data.values,
