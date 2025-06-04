@@ -75,14 +75,20 @@ def prepare_and_sort(plot_data: SpiderPlotData) -> Tuple[List[str], List[float],
         'ethnicity': ['Hispanic or Latino', 'Not Hispanic or Latino'],
         'intersectional_race_ethnicity': ['White', 'Not White or Hispanic or Latino'],
     }
+    attributes = list(custom_orders.keys())
 
     def sort_key(label: str) -> Any:
         attr, grp = label.split(': ', 1)
-        if attr in custom_orders and grp in custom_orders[attr]:
-            # Tuple (0, index) ensures custom-ordered items come first by numeric key
-            return (0, custom_orders[attr].index(grp))
+        if attr in attributes:
+            if grp in custom_orders[attr]:
+                return (attributes.index(attr), custom_orders[attr].index(grp))
+            else:
+                return (attributes.index(attr), len(custom_orders[attr]))
         # Other items sort after custom-ordered, by string label
-        return (1, label)
+        return (len(attributes), label)
+
+    print('groups unsorted:', plot_data.groups)
+    print('groups sorted:', sorted(plot_data.groups, key=lambda x: sort_key(x)))
 
     zipped = list(zip(
         plot_data.groups,

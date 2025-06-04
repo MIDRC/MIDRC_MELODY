@@ -115,13 +115,14 @@ class MainController:
 
                 # 5) Build test data and run the compute function
                 test_data = build_demo_data_wrapper(cfg)
+                plot_config = cfg.get("plot", None)
                 if compute_fn is compute_eod_aaod_metrics:
                     # EOD/AAOD needs a threshold from cfg (default to 0.5)
                     threshold = cfg.get("binary threshold", 0.5)
-                    result = compute_fn(test_data, threshold)
+                    result = compute_fn(test_data, threshold, plot_config)
                 else:
                     # QWK just takes test_data
-                    result = compute_fn(test_data)
+                    result = compute_fn(test_data, plot_config)
 
                 print(f"Finished {banner} metrics in {time.time() - time_start:.2f} seconds.")
 

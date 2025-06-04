@@ -26,7 +26,7 @@ from PySide6.QtGui import QColor
 from MIDRC_MELODY.common.table_tools import GLOBAL_COLORS, build_eod_aaod_tables_gui
 from dataclasses import replace
 
-def compute_qwk_metrics(test_data):
+def compute_qwk_metrics(test_data, plot_config=None):
     # Compute QWK metrics and prepare table rows and plot args.
     delta_kappas = calculate_delta_kappa(test_data)
     all_rows = []
@@ -47,14 +47,16 @@ def compute_qwk_metrics(test_data):
     for model in sorted(kappas.keys()):
         row = [model, f"{kappas[model]:.4f}", f"{intervals[model][0]:.4f}", f"{intervals[model][1]:.4f}"]
         kappas_rows.append((row, None))
-    plot_args = (delta_kappas, test_data.test_cols, {})  # empty plot config
+    p_c = plot_config if plot_config else {}
+    plot_args = (delta_kappas, test_data.test_cols, p_c)
     return all_rows, filtered_rows, kappas_rows, plot_args
 
-def compute_eod_aaod_metrics(test_data, threshold):
+def compute_eod_aaod_metrics(test_data, threshold, plot_config: dict=None):
     # Binzarize the scores and compute EOD/AAOD metrics, then build tables and plot args.
     binarized = binarize_scores(test_data.matched_df, test_data.truth_col, test_data.test_cols, threshold=threshold)
     new_data = replace(test_data, matched_df=binarized)
     eod_aaod = calculate_eod_aaod(new_data)
     all_eod_rows, all_aaod_rows, filtered_rows = build_eod_aaod_tables_gui(eod_aaod)
-    plot_args = (eod_aaod, new_data.test_cols, {})  # empty plot config
+    p_c = plot_config if plot_config else {}
+    plot_args = (eod_aaod, new_data.test_cols, p_c)
     return all_eod_rows, all_aaod_rows, filtered_rows, plot_args
