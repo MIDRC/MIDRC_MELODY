@@ -28,7 +28,8 @@ from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
 from MIDRC_MELODY.common.data_loading import TestAndDemographicData
-from MIDRC_MELODY.common.plot_tools import display_figures_grid, plot_spider_chart, SpiderPlotData
+from MIDRC_MELODY.common.plot_tools import SpiderPlotData
+from MIDRC_MELODY.common.matplotlib_spider import plot_spider_chart, display_figures_grid
 
 
 def calculate_kappas_and_intervals(

@@ -25,7 +25,8 @@ from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
 from MIDRC_MELODY.common.data_loading import check_required_columns, TestAndDemographicData
-from MIDRC_MELODY.common.plot_tools import display_figures_grid, plot_spider_chart, SpiderPlotData
+from MIDRC_MELODY.common.plot_tools import SpiderPlotData
+from MIDRC_MELODY.common.matplotlib_spider import plot_spider_chart, display_figures_grid
 
 
 def binarize_scores(df: pd.DataFrame, truth_col: str, ai_cols: Union[List[str], str], threshold: int = 4
