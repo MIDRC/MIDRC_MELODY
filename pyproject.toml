@@ -1,6 +1,6 @@
 [project]
 name = "MIDRC_MELODY"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
     "pandas",
     "matplotlib",
@@ -12,6 +12,7 @@ dependencies = [
     "tabulate",
     "tqdm-joblib",
     "windows-curses; sys_platform == 'win32'"
+    "plotly"
 ]
 
 [project.optional-dependencies]

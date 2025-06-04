@@ -1,10 +1,57 @@
 from typing import List
+import math
 from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout
-from PySide6.QtCharts import QPolarChart, QChartView, QLineSeries, QValueAxis, QCategoryAxis, QScatterSeries, QAreaSeries
+from PySide6.QtCharts import QPolarChart, QChartView, QLineSeries, QValueAxis, QCategoryAxis, QAreaSeries
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData  # reuse data class from common module
 from MIDRC_MELODY.gui.grabbablewidget import GrabbableChartView
+from MIDRC_MELODY.gui.plotly_spider_widget import PlotlySpiderWidget
+
+
+def _fill_bounds(
+    chart: QPolarChart,
+    angles: List[float],
+    lower_bounds: List[float],
+    upper_bounds: List[float],
+    cat_axis: QCategoryAxis,
+    radial_axis: QValueAxis,
+) -> None:
+    """
+    Draw upper and lower bound lines on the spider chart (no filled area).
+    """
+    # Ensure lists align; if not, skip
+    if not angles or len(lower_bounds) != len(angles) or len(upper_bounds) != len(angles):
+        return
+
+    # Draw lower bound line
+    lower_series = QLineSeries()
+    for angle, lo in zip(angles, lower_bounds):
+        lower_series.append(angle, lo)
+    # Close the loop
+    lower_series.append(360, lower_bounds[0])
+    pen_lo = QPen(QColor('steelblue'))
+    pen_lo.setStyle(Qt.DashLine)
+    pen_lo.setWidth(2)
+    pen_lo.setColor(QColor(70, 130, 180, 128))  # semi-transparent steelblue
+    lower_series.setPen(pen_lo)
+    chart.addSeries(lower_series)
+    lower_series.attachAxis(cat_axis)
+    lower_series.attachAxis(radial_axis)
+
+    # Draw upper bound line
+    upper_series = QLineSeries()
+    for angle, hi in zip(angles, upper_bounds):
+        upper_series.append(angle, hi)
+    upper_series.append(360, upper_bounds[0])
+    pen_hi = QPen(QColor('steelblue'))
+    pen_hi.setStyle(Qt.DashLine)
+    pen_hi.setWidth(2)
+    pen_hi.setColor(QColor(70, 130, 180, 128))
+    upper_series.setPen(pen_hi)
+    chart.addSeries(upper_series)
+    upper_series.attachAxis(cat_axis)
+    upper_series.attachAxis(radial_axis)
 
 
 def _apply_metric_overlay(
@@ -75,10 +122,11 @@ def _apply_metric_overlay(
             baseline_series.attachAxis(radial_axis)
         elif base['type'] == 'ylim':
             # Adjust radial axis minimum
-            radial_axis.setRange(base['lo'], spider_data.ylim_max[metric])
+            y_max = spider_data.ylim_max[spider_data.metric]
+            radial_axis.setRange(base['lo'], y_max)
 
     # --- Fill region if specified ---
-    if 'fill' in cfg:
+    if 'fill' in cfg and False: # Set to False to disable fill for now, QAreaSeries is not yet supported in QPolarChart
         f = cfg['fill']
         lower_series = QLineSeries()
         upper_series = QLineSeries()
@@ -101,7 +149,7 @@ def _apply_metric_overlay(
             if cond(v):
                 angle_deg = angles[i]
                 radius = v
-                d = delta * (spider_data.ylim_max[metric] - radius) / (spider_data.ylim_max[metric] - spider_data.ylim_min[metric])
+                d = delta * (spider_data.ylim_max[spider_data.metric] - radius) / (spider_data.ylim_max[spider_data.metric] - spider_data.ylim_min[spider_data.metric])
                 # Create a small line segment around the threshold point
                 line_series = QLineSeries()
                 line_series.append(angle_deg - d, radius)
@@ -136,7 +184,7 @@ def create_spider_chart(spider_data: SpiderPlotData) -> QPolarChart:
         series.append(angle, value)
     # Close the loop by repeating the first point at 360°
     if series.points():
-        series.append(360, series.points()[0].y())
+        series.append(angles[0] + 360, series.points()[0].y())
 
     chart.addSeries(series)
 
@@ -156,6 +204,16 @@ def create_spider_chart(spider_data: SpiderPlotData) -> QPolarChart:
     radial_axis.setLabelFormat("%.2f")
     chart.addAxis(radial_axis, QPolarChart.PolarOrientationRadial)
     series.attachAxis(radial_axis)
+
+    # Fill the area between lower and upper bounds
+    _fill_bounds(
+        chart,
+        angles,
+        lower_bounds,
+        upper_bounds,
+        cat_axis,
+        radial_axis,
+    )
 
     # Apply metric-specific overlay via helper function
     _apply_metric_overlay(
@@ -189,7 +247,7 @@ def _set_spider_chart_copyable_data(chart_view: GrabbableChartView, spider_data:
         chart_view.copyable_data = formatted_text
 
 
-def display_spider_charts_in_tabs(spider_data_list: List[SpiderPlotData]) -> QTabWidget:
+def display_spider_charts_in_tabs_deprecated(spider_data_list: List[SpiderPlotData]) -> QTabWidget:
     """
     Given a list of SpiderPlotData objects, create a QTabWidget where each tab displays
     the corresponding spider chart in a QChartView.
@@ -207,4 +265,20 @@ def display_spider_charts_in_tabs(spider_data_list: List[SpiderPlotData]) -> QTa
         chart_view.setRenderHint(QPainter.Antialiasing)  # ensure smooth rendering
         layout.addWidget(chart_view)
         tab_widget.addTab(widget, spider_data.model_name)
+    return tab_widget
+
+def display_spider_charts_in_tabs(spider_data_list: List[SpiderPlotData]) -> QTabWidget:
+    """
+    Replaces the old QtCharts polar approach with a Plotly-based QWebEngineView.
+    """
+    tab_widget = QTabWidget()
+    for spider_data in spider_data_list:
+        container = QWidget()
+        layout = QVBoxLayout(container)
+
+        # Use Plotly to draw the spider chart and embed as HTML
+        plotly_widget = PlotlySpiderWidget(spider_data)
+        layout.addWidget(plotly_widget)
+
+        tab_widget.addTab(container, spider_data.model_name)
     return tab_widget
