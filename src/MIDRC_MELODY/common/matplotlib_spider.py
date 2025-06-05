@@ -17,17 +17,18 @@ from typing import List, Tuple, Any
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.collections import PathCollection
 import mplcursors
 
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData, prepare_and_sort, get_full_theta, \
     compute_angles
 
 
-def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
+def plot_spider_chart(spider_data: SpiderPlotData) -> plt.Figure:
     """
     Plot a spider chart for the given groups, values, and bounds.
 
-    :arg plot_data: SpiderPlotData object containing the following fields:
+    :arg spider_data: SpiderPlotData object containing the following fields:
         - `model_name`: Name of the model
         - `groups` (List[str]): List of group names
         - `values`: List of values for each group
@@ -40,16 +41,18 @@ def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
 
     :returns: Matplotlib figure object
     """
-    groups, values, lower_bounds, upper_bounds = prepare_and_sort(plot_data)
-    angles = compute_angles(len(groups), plot_data.plot_config)
-    fig, ax = _init_spider_axes(plot_data.ylim_min[plot_data.metric],
-                                plot_data.ylim_max[plot_data.metric])
+    title = f"{spider_data.model_name} - {spider_data.metric.upper()}"
+
+    groups, values, lower_bounds, upper_bounds = prepare_and_sort(spider_data)
+    angles = compute_angles(len(groups), spider_data.plot_config)
+    fig, ax = _init_spider_axes(spider_data.ylim_min[spider_data.metric],
+                                spider_data.ylim_max[spider_data.metric])
     sc = _draw_main_series(ax, angles, values)
     _add_cursor_to_spider_plot(sc, fig.canvas, groups, values, lower_bounds, upper_bounds)
     _fill_bounds(ax, angles, lower_bounds, upper_bounds)
-    _configure_axes(ax, angles, groups, plot_data.model_name)
-    if plot_data.metric:
-        _apply_metric_overlay(ax, angles, plot_data.metric, values, lower_bounds, upper_bounds)
+    _configure_axes(ax, angles, groups, title)
+    if spider_data.metric:
+        _apply_metric_overlay(ax, angles, spider_data.metric, values, lower_bounds, upper_bounds)
     plt.tight_layout()
     return fig
 
@@ -89,7 +92,7 @@ def _add_cursor_to_spider_plot(sc, canvas, groups, values, lower_bounds, upper_b
     return cursor
 
 
-def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float]) -> plt.PathCollection:
+def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float]) -> PathCollection:
     ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2)
     return ax.scatter(angles, values, marker='o', color='b')
 
