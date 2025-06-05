@@ -39,7 +39,7 @@ from MIDRC_MELODY.common.qwk_metrics import (
 
 # ─── GUI‐specific imports ────────────────────────────────────────────────────────
 from MIDRC_MELODY.gui.copyabletableview import CopyableTableWidget
-from MIDRC_MELODY.gui.plotting import display_spider_charts_in_tabs
+from MIDRC_MELODY.gui.qchart_spider_widget import display_spider_charts_in_tabs
 from MIDRC_MELODY.gui.tqdm_handler import ANSIProcessor
 
 from MIDRC_MELODY.gui.data_loading import load_config_file, edit_config_file

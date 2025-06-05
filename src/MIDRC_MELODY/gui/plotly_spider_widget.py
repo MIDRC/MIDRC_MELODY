@@ -13,7 +13,9 @@
 #      limitations under the License.
 #
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from typing import List
+
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
 from MIDRC_MELODY.common.plotly_spider import spider_to_html
@@ -35,3 +37,20 @@ class PlotlySpiderWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self._view)
         self.setLayout(layout)
+
+
+def display_spider_charts_in_tabs_plotly(spider_data_list: List[SpiderPlotData]) -> QTabWidget:
+    """
+    Replaces the old QtCharts polar approach with a Plotly-based QWebEngineView.
+    """
+    tab_widget = QTabWidget()
+    for spider_data in spider_data_list:
+        container = QWidget()
+        layout = QVBoxLayout(container)
+
+        # Use Plotly to draw the spider chart and embed as HTML
+        plotly_widget = PlotlySpiderWidget(spider_data)
+        layout.addWidget(plotly_widget)
+
+        tab_widget.addTab(container, spider_data.model_name)
+    return tab_widget
