@@ -124,10 +124,10 @@ plot:
 
 ## Input Data
 
-| File           | Required Columns            | Purpose                                   |
-| -------------- | --------------------------- | ----------------------------------------- |
-| **Truth file** | `uid`, `truth`, attributes… | Ground‑truth labels and subgroup columns. |
-| **Score file** | `uid`, `score`              | Model predictions keyed to the same UID.  |
+| File           | Required Columns            | Purpose                                   | Example                                            |
+| -------------- | --------------------------- | ----------------------------------------- |----------------------------------------------------|
+| **Truth file** | `uid`, `truth`, attributes… | Ground‑truth labels and subgroup columns. | [demo_truth.csv](data/demo_truthNdemographics.csv) |
+| **Score file** | `uid`, `score`              | Model predictions keyed to the same UID.  | [demo_scores.csv](data/demo_scores.csv)            |
 
 > UID values must match between truth and score files.
 
