@@ -20,6 +20,7 @@ from contextlib import ExitStack, redirect_stdout, redirect_stderr
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtGui import QTextCursor
 
+from MIDRC_MELODY.common.data_loading import TestAndDemographicData
 from MIDRC_MELODY.gui.data_loading import load_config_dict, build_demo_data_wrapper
 from MIDRC_MELODY.gui.metrics_model import compute_qwk_metrics, compute_eod_aaod_metrics
 from MIDRC_MELODY.gui.tqdm_handler import Worker, EmittingStream
@@ -114,7 +115,7 @@ class MainController:
                       f"(Started at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_start))})")
 
                 # 5) Build test data and run the compute function
-                test_data = build_demo_data_wrapper(cfg)
+                test_data: TestAndDemographicData = build_demo_data_wrapper(cfg)
                 plot_config = cfg.get("plot", None)
                 if compute_fn is compute_eod_aaod_metrics:
                     # EOD/AAOD needs a threshold from cfg (default to 0.5)
@@ -131,9 +132,9 @@ class MainController:
             sys.stderr = original_stderr
 
             # 7) Return the computed result, e.g.
-            #    - For QWK: (all_rows, filtered_rows, kappas_rows, plot_args)
-            #    - For EOD/AAOD: (all_eod_rows, all_aaod_rows, filtered_rows, plot_args)
-            return result
+            #    - For QWK: (all_rows, filtered_rows, kappas_rows, plot_args), reference_groups
+            #    - For EOD/AAOD: (all_eod_rows, all_aaod_rows, filtered_rows, plot_args), reference_groups
+            return result, test_data.reference_groups
 
         # Instantiate the Worker around our _task function + config dict
         worker = Worker(_task, config)

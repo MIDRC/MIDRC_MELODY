@@ -13,10 +13,10 @@
 #      limitations under the License.
 #
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from PySide6.QtCore import Qt, QThreadPool, Slot
-from PySide6.QtGui import QAction, QBrush, QFontDatabase, QIcon
+from PySide6.QtGui import QAction, QBrush, QFontDatabase, QIcon, QColor
 from PySide6.QtWidgets import (
     QMainWindow,
     QPlainTextEdit,
@@ -55,6 +55,21 @@ class NumericSortTableWidgetItem(QTableWidgetItem):
             return float(self.text()) < float(other.text())
         except ValueError:
             return super().__lt__(other)
+
+
+def _add_ref_group(rows: List[Tuple[List[str], QColor]], ref_groups: Dict[str, str]) -> List[Tuple[List[str], QColor]]:
+    """
+    Add a reference group to each row based on the category.
+    If the category is not found in ref_groups, use "N/A".
+    """
+    new_rows = []
+    for row in rows:
+        row_0 = row[0]
+        category = row_0[1]
+        ref = ref_groups.get(category, "N/A")
+        row_0.insert(2, ref)  # Insert the reference group at index 3
+        new_rows.append((row_0, row[1]))  # Keep the original color if any
+    return new_rows
 
 
 class MainWindow(QMainWindow):
@@ -293,11 +308,12 @@ class MainWindow(QMainWindow):
         Expect result = (all_rows, filtered_rows, kappas_rows, plot_args).
         Build three tables + a spider‐chart tab, then insert into QTabWidget.
         """
-        all_rows, filtered_rows, kappas_rows, plot_args = result
+        (all_rows, filtered_rows, kappas_rows, plot_args), reference_groups = result
 
         # Table of all delta‐κ values
-        headers_delta = ["Model", "Category", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
-        table_all = self.create_table_widget(headers_delta, all_rows)
+        headers_delta = ["Model", "Category", "Reference", "Group", "Delta Kappa", "Lower CI", "Upper CI"]
+        delta_table_data = _add_ref_group(all_rows, reference_groups)
+        table_all = self.create_table_widget(headers_delta, delta_table_data)
 
         # Table of filtered delta‐κ values
         table_filtered = self.create_table_widget(headers_delta, filtered_rows)
@@ -323,19 +339,23 @@ class MainWindow(QMainWindow):
         Expect result = (all_eod_rows, all_aaod_rows, filtered_rows, plot_args).
         Build two tables + filtered table + spider‐chart tabs, then insert into QTabWidget.
         """
-        all_eod_rows, all_aaod_rows, filtered_rows, plot_args = result
+        table_info, reference_groups = result
+        all_eod_rows, all_aaod_rows, filtered_rows, plot_args = table_info
 
         # Table of all EOD values
-        headers = ["Model", "Category", "Group", "Median", "Lower CI", "Upper CI"]
-        table_all_eod = self.create_table_widget(headers, all_eod_rows)
+        headers = ["Model", "Category", "Reference", "Group", "Median", "Lower CI", "Upper CI"]
+        eod_table_data = _add_ref_group(all_eod_rows, reference_groups)
+        table_all_eod = self.create_table_widget(headers, eod_table_data)
 
         # Table of all AAOD values
-        table_all_aaod = self.create_table_widget(headers, all_aaod_rows)
+        aaod_table_data = _add_ref_group(all_aaod_rows, reference_groups)
+        table_all_aaod = self.create_table_widget(headers, aaod_table_data)
 
         # Filtered table with an extra “Metric” column inserted at index 3
         filt_headers = headers.copy()
-        filt_headers.insert(3, "Metric")
-        table_filtered = self.create_table_widget(filt_headers, filtered_rows)
+        filt_headers.insert(4, "Metric")
+        filtered_table_data = _add_ref_group(filtered_rows, reference_groups)
+        table_filtered = self.create_table_widget(filt_headers, filtered_table_data)
 
         # One or more spider‐chart tabs for EOD/AAOD
         chart_tabs = self.create_spider_plot_from_eod_aaod(*plot_args)

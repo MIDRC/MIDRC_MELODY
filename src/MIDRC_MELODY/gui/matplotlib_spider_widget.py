@@ -130,7 +130,7 @@ class MatplotlibSpiderWidget(QWidget):
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
-                "The figure layout has changed to tight",
+                "(?s)(?=.*[Tt]ight)(?=.*[Ll]ayout).*",  # Ignore tight layout warnings
                 category=UserWarning,
             )
             fig.tight_layout(pad=self._pad)

@@ -178,23 +178,40 @@ def _annotate(
     data: List[float],
     condition: Any,
     color: str,
+    delta: float = 0.15,
 ) -> None:
     """
-    Annotate the spider plot with specific conditions.
-
-    :arg ax: Matplotlib Axes object
-    :arg angles: List of angles for each group
-    :arg data: List of data values to check against the condition
-    :arg condition: Function to determine if the annotation should be applied
-    :arg color: Color for the annotation text and line
+    Draw small perpendicular line segments at threshold points, scaling
+    their angular span by (ymax - value)/(ymax - ymin).
     """
-    for i, label in enumerate(ax.get_xticklabels()[:-1]):
-        if condition(data[i]):
-            angle = angles[i]
-            rot = 90 + np.degrees(angle)
-            label.set_fontweight('bold')
-            label.set_color(color)
-            ax.text(angle, data[i], '—', rotation=rot, color=color, ha='center', va='center', fontsize=24)
+    ymin, ymax = ax.get_ylim()
+    full_span = ymax - ymin
+    max_angle = 2 * np.pi
+    labels = ax.get_xticklabels()
+
+    for i in range(len(data)):
+        val = data[i]
+        if not condition(val):
+            continue
+
+        # color the i-th tick label
+        if i < len(labels):
+            labels[i].set_fontweight('bold')
+            labels[i].set_color(color)
+
+        angle = angles[i]
+        d_angle = delta * (ymax - val) / full_span
+        start, end = angle - d_angle, angle + d_angle
+
+        # handle wrap-around in [0, 2π)
+        segments = []
+        if start < 0 or end >= max_angle:
+            segments.append((start % max_angle, end % max_angle))
+        else:
+            segments.append((start, end))
+
+        for a0, a1 in segments:
+            ax.plot([a0, a1], [val, val], color=color, linewidth=2, solid_capstyle='butt')
 
 
 def _fill_bounds(
