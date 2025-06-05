@@ -31,8 +31,7 @@ from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from MIDRC_MELODY.common.matplotlib_spider import plot_spider_chart
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
-from MIDRC_MELODY.gui.grabbablewidget import GrabbableWidgetMixin
-from MIDRC_MELODY.gui.qchart_spider_widget import set_spider_chart_copyable_data
+from MIDRC_MELODY.gui.grabbablewidget import GrabbableWidgetMixin, GrabbableChartView
 
 __all__ = [
     "MatplotlibSpiderWidget",
@@ -65,7 +64,7 @@ class MatplotlibSpiderWidget(QWidget):
     ) -> None:
         super().__init__(parent)
         self.grabbable_mixin = GrabbableWidgetMixin(self, "MIDRC-MELODY Spider Chart ")
-        set_spider_chart_copyable_data(self, spider_data)
+        _set_spider_chart_copyable_data(self, spider_data)
 
         self._pad = pad
 
@@ -188,3 +187,19 @@ def display_spider_charts_in_tabs_matplotlib(
 
         tab_widget.addTab(container, spider_data.model_name)
     return tab_widget
+
+
+def _set_spider_chart_copyable_data(chart_view: GrabbableChartView|QWidget, spider_data: SpiderPlotData) -> None:
+    """
+    Set the copyable data for the spider chart.
+
+    :arg chart_view: GrabbableChartView (or similar) to set the copyable data for.
+    :arg spider_data: SpiderPlotData containing the data to be displayed.
+    """
+    if chart_view and spider_data:
+        headers = ['Model', 'Metric', 'Category', 'Group', 'Value']
+        formatted_text = "\t".join(headers) + "\n"
+        for group, value in zip(spider_data.groups, spider_data.values):
+            c, g = group.split(': ', 1) if ': ' in group else (group, group)
+            formatted_text += f"{spider_data.model_name}\t{spider_data.metric}\t{c}\t{g}\t{value}\n"
+        chart_view.copyable_data = formatted_text

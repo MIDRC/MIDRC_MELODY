@@ -11,8 +11,8 @@ dependencies = [
     "tqdm",
     "tabulate",
     "tqdm-joblib",
-    "windows-curses; sys_platform == 'win32'"
-    "plotly"
+    "mplcursors",
+    "windows-curses; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -21,9 +21,9 @@ gui = [
 ]
 
 [project.scripts]
-melody = "melody:main"
-melody-gui = "melody_gui:main"
-melody_gui = "melody_gui:main"
+melody = "MIDRC_MELODY.melody:main"
+melody-gui = "MIDRC_MELODY.melody_gui:main"
+melody_gui = "MIDRC_MELODY.melody_gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

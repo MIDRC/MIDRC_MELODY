@@ -17,6 +17,7 @@ from typing import List, Tuple, Any
 
 import numpy as np
 from matplotlib import pyplot as plt
+import mplcursors
 
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData, prepare_and_sort, get_full_theta, \
     compute_angles
@@ -43,7 +44,8 @@ def plot_spider_chart(plot_data: SpiderPlotData) -> plt.Figure:
     angles = compute_angles(len(groups), plot_data.plot_config)
     fig, ax = _init_spider_axes(plot_data.ylim_min[plot_data.metric],
                                 plot_data.ylim_max[plot_data.metric])
-    _draw_main_series(ax, angles, values)
+    sc = _draw_main_series(ax, angles, values)
+    _add_cursor_to_spider_plot(sc, fig.canvas, groups, values, lower_bounds, upper_bounds)
     _fill_bounds(ax, angles, lower_bounds, upper_bounds)
     _configure_axes(ax, angles, groups, plot_data.model_name)
     if plot_data.metric:
@@ -58,9 +60,38 @@ def _init_spider_axes(ymin: float, ymax: float) -> Tuple[plt.Figure, plt.Axes]:
     return fig, ax
 
 
-def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float]) -> None:
+def _add_cursor_to_spider_plot(sc, canvas, groups, values, lower_bounds, upper_bounds) -> mplcursors.Cursor:
+    """
+    Attach a hover cursor to the scatter points in the spider plot.
+
+    :arg sc: Scatter collection object from the spider plot
+    :arg groups: List of group names
+    :arg values: List of values for each group
+    :arg lower_bounds: List of lower bounds for each group
+    :arg upper_bounds: List of upper bounds for each group
+    """
+    cursor = mplcursors.cursor(sc, hover=True)
+
+    @cursor.connect("add")
+    def on_add(sel):
+        i = sel.index
+        sel.annotation.set_text(
+            f"{groups[i]}\n"
+            f"Median: {values[i]:.3f} "
+            f"[{lower_bounds[i]:.3f}, {upper_bounds[i]:.3f}]"
+        )
+
+    def _hide_all_annotations(event):
+        for sel in list(cursor.selections):
+            cursor.remove_selection(sel)
+
+    canvas.mpl_connect('button_press_event', _hide_all_annotations)
+    return cursor
+
+
+def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float]) -> plt.PathCollection:
     ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2)
-    ax.scatter(angles, values, marker='o', color='b')
+    return ax.scatter(angles, values, marker='o', color='b')
 
 
 def _apply_metric_overlay(
@@ -133,7 +164,7 @@ def _annotate(
             rot = 90 + np.degrees(angle)
             label.set_fontweight('bold')
             label.set_color(color)
-            ax.text(angle, data[i], '—', rotation=rot, color=color, ha='center', va='center', fontsize=12)
+            ax.text(angle, data[i], '—', rotation=rot, color=color, ha='center', va='center', fontsize=24)
 
 
 def _fill_bounds(

@@ -20,7 +20,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData  # reuse data class from common module
 from MIDRC_MELODY.gui.grabbablewidget import GrabbableChartView
-from MIDRC_MELODY.gui.plotly_spider_widget import PlotlySpiderWidget
+
+from src.MIDRC_MELODY.gui.matplotlib_spider_widget import _set_spider_chart_copyable_data
 
 
 def _fill_bounds(
@@ -250,22 +251,6 @@ def create_spider_chart(spider_data: SpiderPlotData) -> QPolarChart:
 
     chart.legend().hide()
     return chart
-
-
-def set_spider_chart_copyable_data(chart_view: GrabbableChartView|QWidget, spider_data: SpiderPlotData) -> None:
-    """
-    Set the copyable data for the spider chart.
-
-    :arg chart_view: GrabbableChartView (or similar) to set the copyable data for.
-    :arg spider_data: SpiderPlotData containing the data to be displayed.
-    """
-    if chart_view and spider_data:
-        headers = ['Model', 'Metric', 'Category', 'Group', 'Value']
-        formatted_text = "\t".join(headers) + "\n"
-        for group, value in zip(spider_data.groups, spider_data.values):
-            c, g = group.split(': ', 1) if ': ' in group else (group, group)
-            formatted_text += f"{spider_data.model_name}\t{spider_data.metric}\t{c}\t{g}\t{value}\n"
-        chart_view.copyable_data = formatted_text
 
 
 def display_spider_charts_in_tabs(spider_data_list: List[SpiderPlotData]) -> QTabWidget:
