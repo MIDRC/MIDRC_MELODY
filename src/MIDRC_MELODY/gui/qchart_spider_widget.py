@@ -252,11 +252,11 @@ def create_spider_chart(spider_data: SpiderPlotData) -> QPolarChart:
     return chart
 
 
-def _set_spider_chart_copyable_data(chart_view: GrabbableChartView, spider_data: SpiderPlotData) -> None:
+def set_spider_chart_copyable_data(chart_view: GrabbableChartView|QWidget, spider_data: SpiderPlotData) -> None:
     """
     Set the copyable data for the spider chart.
 
-    :arg chart_view: GrabbableChartView to set the copyable data for.
+    :arg chart_view: GrabbableChartView (or similar) to set the copyable data for.
     :arg spider_data: SpiderPlotData containing the data to be displayed.
     """
     if chart_view and spider_data:
@@ -282,7 +282,7 @@ def display_spider_charts_in_tabs(spider_data_list: List[SpiderPlotData]) -> QTa
             chart,
             save_file_prefix=f"MIDRC-MELODY_{spider_data.metric}_{spider_data.model_name}_spider_chart",
         )
-        _set_spider_chart_copyable_data(chart_view, spider_data)
+        set_spider_chart_copyable_data(chart_view, spider_data)
         chart_view.setRenderHint(QPainter.Antialiasing)  # ensure smooth rendering
         layout.addWidget(chart_view)
         tab_widget.addTab(widget, spider_data.model_name)

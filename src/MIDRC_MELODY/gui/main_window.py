@@ -39,7 +39,9 @@ from MIDRC_MELODY.common.qwk_metrics import (
 
 # ─── GUI‐specific imports ────────────────────────────────────────────────────────
 from MIDRC_MELODY.gui.copyabletableview import CopyableTableWidget
-from MIDRC_MELODY.gui.qchart_spider_widget import display_spider_charts_in_tabs
+# from MIDRC_MELODY.gui.qchart_spider_widget import display_spider_charts_in_tabs
+from MIDRC_MELODY.gui.matplotlib_spider_widget import MatplotlibSpiderWidget
+from MIDRC_MELODY.gui.matplotlib_spider_widget import display_spider_charts_in_tabs_matplotlib as display_spider_charts_in_tabs
 from MIDRC_MELODY.gui.tqdm_handler import ANSIProcessor
 
 from MIDRC_MELODY.gui.data_loading import load_config_file, edit_config_file
@@ -61,6 +63,9 @@ class MainWindow(QMainWindow):
         self.resize(1200, 600)
         self.setWindowTitle("Melody GUI")
         self.threadpool = QThreadPool()
+
+        # Track whether to show MPL toolbar in spider charts
+        self._show_mpl_toolbar = False
 
         # ─── Instantiate controller and hand it this window ──────────────────────
         self.controller = MainController(self)
@@ -114,6 +119,14 @@ class MainWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         toolbar.addWidget(spacer)
 
+        # ─── Checkable “Show MPL Toolbar” action ────────────────────────────
+        self._toggle_mpl_act = QAction(f"{'Hide' if self._show_mpl_toolbar else 'Show'} Plot Toolbar", self)
+        self._toggle_mpl_act.setCheckable(True)
+        self._toggle_mpl_act.setChecked(self._show_mpl_toolbar)
+        self._toggle_mpl_act.setToolTip("Toggle the Matplotlib navigation toolbar in spider‐chart tabs")
+        self._toggle_mpl_act.toggled.connect(self._on_toggle_mpl_toolbar)
+        toolbar.addAction(self._toggle_mpl_act)
+
         # Config button (duplicate of menu option)
         config_icon = QIcon.fromTheme(QIcon.ThemeIcon.DocumentProperties)
         config_act = QAction(config_icon, "Config", self)
@@ -139,6 +152,26 @@ class MainWindow(QMainWindow):
     def edit_config(self):
         # Delegate to data_loading.edit_config_file()
         edit_config_file(self)
+
+    @Slot(bool)
+    def _on_toggle_mpl_toolbar(self, checked: bool):
+        """
+        Handler for the “Show MPL Toolbar” checkbox.
+        Show/hide any existing spider‐chart toolbars, and update the flag
+        so future tabs respect the setting.
+        """
+        self._show_mpl_toolbar = checked
+        self._toggle_mpl_act.setText(f"{'Hide' if checked else 'Show'} Plot Toolbar")
+
+        # Iterate through all tabs in the central QTabWidget:
+        tabs: QTabWidget = self.centralWidget()
+        for idx in range(tabs.count()):
+            widget = tabs.widget(idx)
+            # Each spider‐chart tab is a container QWidget whose layout’s first child
+            # is a MatplotlibSpiderWidget.  We can walk its children to find it.
+            spiders = widget.findChildren(MatplotlibSpiderWidget)
+            for spider in spiders:
+                spider.set_toolbar_visible(checked)
 
     def show_progress_view(self):
         """
@@ -221,18 +254,16 @@ class MainWindow(QMainWindow):
         table.resizeColumnsToContents()
         return table
 
-    @staticmethod
-    def create_spider_plot_from_qwk(delta_kappas, test_cols, plot_config=None) -> QTabWidget:
+    def create_spider_plot_from_qwk(self, delta_kappas, test_cols, plot_config=None) -> QTabWidget:
         """
         Given (delta_kappas: dict, test_cols: List[str], plot_config: dict),
         build spider‐chart(s) for QWK and return a QTabWidget containing them.
         """
         plot_data_list = create_spider_plot_data_qwk(delta_kappas, test_cols, plot_config=plot_config)
-        return display_spider_charts_in_tabs(plot_data_list)
+        return display_spider_charts_in_tabs(plot_data_list, show_toolbar=self._show_mpl_toolbar)
 
-    @staticmethod
     def create_spider_plot_from_eod_aaod(
-        eod_aaod, test_cols, plot_config=None, *, metrics=("eod", "aaod")
+        self, eod_aaod, test_cols, plot_config=None, *, metrics=("eod", "aaod")
     ) -> List[QTabWidget]:
         """
         Given (eod_aaod: dict, test_cols: List[str], plot_config: dict),
@@ -250,7 +281,7 @@ class MainWindow(QMainWindow):
             temp.setdefault(pd.metric, []).append(pd)
 
         for metric, data_list in temp.items():
-            tw = display_spider_charts_in_tabs(data_list)
+            tw = display_spider_charts_in_tabs(data_list, show_toolbar=self._show_mpl_toolbar)
             tw.setObjectName(f"{metric.upper()} Spider Charts")
             chart_tabs.append(tw)
 
