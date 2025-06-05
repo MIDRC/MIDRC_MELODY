@@ -63,7 +63,7 @@ class MatplotlibSpiderWidget(QWidget):
         pad: float = 0.4,
     ) -> None:
         super().__init__(parent)
-        self.grabbable_mixin = GrabbableWidgetMixin(self, "MIDRC-MELODY Spider Chart ")
+        self._grabbable_mixin = GrabbableWidgetMixin(self, "MIDRC-MELODY Spider Chart ")
         _set_spider_chart_copyable_data(self, spider_data)
 
         self._pad = pad
@@ -144,7 +144,7 @@ class MatplotlibSpiderWidget(QWidget):
         Returns:
             str: The data to be copied to the clipboard when requested.
         """
-        return self.grabbable_mixin.copyable_data
+        return self._grabbable_mixin.copyable_data
 
     @copyable_data.setter
     def copyable_data(self, data: str):
@@ -157,7 +157,7 @@ class MatplotlibSpiderWidget(QWidget):
         Returns:
             None
         """
-        self.grabbable_mixin.copyable_data = data
+        self._grabbable_mixin.copyable_data = data
 
 
 # ---------------------------------------------------------------------------
@@ -189,17 +189,17 @@ def display_spider_charts_in_tabs_matplotlib(
     return tab_widget
 
 
-def _set_spider_chart_copyable_data(chart_view: GrabbableChartView|QWidget, spider_data: SpiderPlotData) -> None:
+def _set_spider_chart_copyable_data(widget: GrabbableWidgetMixin|QWidget, spider_data: SpiderPlotData) -> None:
     """
     Set the copyable data for the spider chart.
 
-    :arg chart_view: GrabbableChartView (or similar) to set the copyable data for.
+    :arg widget: A GrabbalbeWidgetMixin or a QWidget that forwards the copyable_data property to a GrabbableWidgetMixin.
     :arg spider_data: SpiderPlotData containing the data to be displayed.
     """
-    if chart_view and spider_data:
+    if widget and spider_data:
         headers = ['Model', 'Metric', 'Category', 'Group', 'Value']
         formatted_text = "\t".join(headers) + "\n"
         for group, value in zip(spider_data.groups, spider_data.values):
             c, g = group.split(': ', 1) if ': ' in group else (group, group)
             formatted_text += f"{spider_data.model_name}\t{spider_data.metric}\t{c}\t{g}\t{value}\n"
-        chart_view.copyable_data = formatted_text
+        widget.copyable_data = formatted_text

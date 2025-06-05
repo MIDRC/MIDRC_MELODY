@@ -20,8 +20,7 @@ from matplotlib import pyplot as plt
 from matplotlib.collections import PathCollection
 import mplcursors
 
-from MIDRC_MELODY.common.plot_tools import SpiderPlotData, prepare_and_sort, get_full_theta, \
-    compute_angles
+from MIDRC_MELODY.common.plot_tools import SpiderPlotData, prepare_and_sort, get_full_theta, compute_angles
 
 
 def plot_spider_chart(spider_data: SpiderPlotData) -> plt.Figure:
@@ -93,6 +92,15 @@ def _add_cursor_to_spider_plot(sc, canvas, groups, values, lower_bounds, upper_b
 
 
 def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float]) -> PathCollection:
+    """
+    Draw the main series of the spider plot.
+
+    :arg ax: Matplotlib Axes object
+    :arg angles: List of angles for each group
+    :arg values: List of values for each group
+
+    :returns: Matplotlib PathCollection object for the scatter points
+    """
     ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2)
     return ax.scatter(angles, values, marker='o', color='b')
 
@@ -105,6 +113,16 @@ def _apply_metric_overlay(
     lower_bounds: List[float],
     upper_bounds: List[float],
 ) -> None:
+    """
+    Apply metric-specific overlays to the spider plot.
+
+    :arg ax: Matplotlib Axes object
+    :arg angles: List of angles for each group
+    :arg metric: Metric to apply the overlay for (e.g., 'QWK', 'EOD', 'AAOD')
+    :arg values: List of values for each group
+    :arg lower_bounds: List of lower bounds for each group
+    :arg upper_bounds: List of upper bounds for each group
+    """
     metric = metric.upper()
     full_theta = get_full_theta()
     overlay_config = {
@@ -161,6 +179,15 @@ def _annotate(
     condition: Any,
     color: str,
 ) -> None:
+    """
+    Annotate the spider plot with specific conditions.
+
+    :arg ax: Matplotlib Axes object
+    :arg angles: List of angles for each group
+    :arg data: List of data values to check against the condition
+    :arg condition: Function to determine if the annotation should be applied
+    :arg color: Color for the annotation text and line
+    """
     for i, label in enumerate(ax.get_xticklabels()[:-1]):
         if condition(data[i]):
             angle = angles[i]
@@ -176,6 +203,14 @@ def _fill_bounds(
     lower_bounds: List[float],
     upper_bounds: List[float],
 ) -> None:
+    """
+    Fill the area between the lower and upper bounds in the spider plot.
+
+    :arg ax: Matplotlib Axes object
+    :arg angles: List of angles for each group
+    :arg lower_bounds: List of lower bounds for each group
+    :arg upper_bounds: List of upper bounds for each group
+    """
     ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2)
 
 
@@ -185,6 +220,14 @@ def _configure_axes(
     groups: List[str],
     title: str,
 ) -> None:
+    """
+    Configure the axes of the spider plot with labels and title.
+
+    :arg ax: Matplotlib Axes object
+    :arg angles: List of angles for each group
+    :arg groups: List of group names
+    :arg title: Title for the spider plot
+    """
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(groups[:-1])
     ax.set_title(title, size=14, weight='bold')
