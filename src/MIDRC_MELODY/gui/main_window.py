@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
         # EOD/AAOD Metrics action
-        eod_icon = QIcon.fromTheme(QIcon.ThemeIcon.Computer)
+        eod_icon = QIcon.fromTheme("computer")
         eod_act = QAction(eod_icon, "EOD/AAOD Metrics", self)
         eod_act.setToolTip("Calculate EOD/AAOD Metrics")
         eod_act.triggered.connect(self.controller.calculate_eod_aaod)
@@ -203,7 +203,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self._toggle_mpl_act)
 
         # Config action
-        config_icon = QIcon.fromTheme(QIcon.ThemeIcon.DocumentProperties)
+        config_icon = QIcon.fromTheme("document-properties")
         config_act = QAction(config_icon, "Config", self)
         config_act.setToolTip("Edit Configuration")
         config_act.triggered.connect(self.edit_config)
