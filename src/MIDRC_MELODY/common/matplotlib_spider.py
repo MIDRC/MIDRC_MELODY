@@ -49,6 +49,9 @@ def plot_spider_chart(spider_data: SpiderPlotData) -> plt.Figure:
     fig, ax = _init_spider_axes(spider_data.ylim_min[spider_data.metric],
                                 spider_data.ylim_max[spider_data.metric])
 
+    # Configure the axes with labels and title
+    _configure_axes(ax, angles, groups, title)
+
     # Draw the main series of the spider plot (line and scatter points)
     sc = _draw_main_series(ax, angles, values, zorder=9)
 
@@ -62,9 +65,6 @@ def plot_spider_chart(spider_data: SpiderPlotData) -> plt.Figure:
     if spider_data.metric:
         _apply_metric_overlay(ax, angles, spider_data.metric, values, lower_bounds, upper_bounds,
                               zorder_bg=2, zorder_thresholds=10)
-
-    # Configure the axes with labels and title
-    _configure_axes(ax, angles, groups, title)
 
     fig.tight_layout()
     return fig
@@ -210,7 +210,7 @@ def _annotate(
     max_angle = 2 * np.pi
     labels = ax.get_xticklabels()
 
-    for i in range(len(data)):
+    for i in range(len(data) - 1):
         raw_val = data[i]
         if not condition(raw_val):
             continue
@@ -219,11 +219,14 @@ def _annotate(
         if i < len(labels):
             labels[i].set_fontweight('bold')
             labels[i].set_color(color)
+        else:
+            print(f"Warning: Not enough labels ({len(labels)}) for {len(data) - 1} data points. "
+                  "Please check the input data.")
 
         angle = angles[i]
         d_angle = delta * full_span / (raw_val - ymin)
         # compute radial value so the chord crosses through the true data point
-        r_val = raw_val / math.cos(d_angle)
+        r_val = ymin + (raw_val - ymin) / math.cos(d_angle)
         start, end = angle - d_angle, angle + d_angle
 
         # handle wrap-around in [0, 2π)
