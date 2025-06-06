@@ -11,11 +11,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""Qt-friendly Matplotlib spider-plot widget (drop-in replacement for
-``plotly_spider_widget``).
+"""Qt-friendly Matplotlib spider-plot widget
 
 This revision exposes the NavigationToolbar so callers can show/hide it at runtime.
-Cropping issues are still handled by constrained layout + tight_layout on resize.
+Cropping issues are handled by constrained layout + tight_layout on resize.
 """
 from __future__ import annotations
 
@@ -31,7 +30,7 @@ from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from MIDRC_MELODY.common.matplotlib_spider import plot_spider_chart
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
-from MIDRC_MELODY.gui.grabbablewidget import GrabbableWidgetMixin, GrabbableChartView
+from MIDRC_MELODY.gui.grabbablewidget import GrabbableWidgetMixin
 
 __all__ = [
     "MatplotlibSpiderWidget",

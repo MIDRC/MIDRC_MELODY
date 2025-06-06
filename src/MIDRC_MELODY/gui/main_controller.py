@@ -20,8 +20,8 @@ from contextlib import ExitStack, redirect_stdout, redirect_stderr
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtGui import QTextCursor
 
-from MIDRC_MELODY.common.data_loading import TestAndDemographicData
-from MIDRC_MELODY.gui.data_loading import load_config_dict, build_demo_data_wrapper
+from MIDRC_MELODY.common.data_loading import TestAndDemographicData, build_test_and_demographic_data
+from MIDRC_MELODY.gui.data_loading import load_config_dict
 from MIDRC_MELODY.gui.metrics_model import compute_qwk_metrics, compute_eod_aaod_metrics
 from MIDRC_MELODY.gui.tqdm_handler import Worker, EmittingStream
 
@@ -115,7 +115,7 @@ class MainController:
                       f"(Started at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_start))})")
 
                 # 5) Build test data and run the compute function
-                test_data: TestAndDemographicData = build_demo_data_wrapper(cfg)
+                test_data: TestAndDemographicData = build_test_and_demographic_data(cfg)
                 plot_config = cfg.get("plot", None)
                 if compute_fn is compute_eod_aaod_metrics:
                     # EOD/AAOD needs a threshold from cfg (default to 0.5)

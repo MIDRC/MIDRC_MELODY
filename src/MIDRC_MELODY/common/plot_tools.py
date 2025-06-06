@@ -106,6 +106,11 @@ def prepare_and_sort(plot_data: SpiderPlotData) -> Tuple[List[str], List[float],
 
 
 def get_full_theta() -> np.ndarray:
+    """
+    Get a full circle of angles for plotting.
+
+    :returns: Array of angles from 0 to 2π
+    """
     return np.linspace(0, 2 * np.pi, 100)
 
 

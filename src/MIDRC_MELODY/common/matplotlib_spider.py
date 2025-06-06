@@ -13,7 +13,8 @@
 #      limitations under the License.
 #
 
-from typing import List, Tuple, Any
+import math
+from typing import List, Tuple, Any, Optional
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -42,17 +43,30 @@ def plot_spider_chart(spider_data: SpiderPlotData) -> plt.Figure:
     """
     title = f"{spider_data.model_name} - {spider_data.metric.upper()}"
 
+    # Prepare and sort the data for plotting, and create figure and axes
     groups, values, lower_bounds, upper_bounds = prepare_and_sort(spider_data)
     angles = compute_angles(len(groups), spider_data.plot_config)
     fig, ax = _init_spider_axes(spider_data.ylim_min[spider_data.metric],
                                 spider_data.ylim_max[spider_data.metric])
-    sc = _draw_main_series(ax, angles, values)
+
+    # Draw the main series of the spider plot (line and scatter points)
+    sc = _draw_main_series(ax, angles, values, zorder=9)
+
+    # Add a hover cursor to the scatter points for interactivity
     _add_cursor_to_spider_plot(sc, fig.canvas, groups, values, lower_bounds, upper_bounds)
-    _fill_bounds(ax, angles, lower_bounds, upper_bounds)
-    _configure_axes(ax, angles, groups, title)
+
+    # Fill the area between lower and upper bounds of the e.g. confidence intervals
+    _fill_bounds(ax, angles, lower_bounds, upper_bounds, zorder=5)
+
+    # If a metric is specified, apply the metric-specific overlay (e.g., thresholds, fill regions)
     if spider_data.metric:
-        _apply_metric_overlay(ax, angles, spider_data.metric, values, lower_bounds, upper_bounds)
-    plt.tight_layout()
+        _apply_metric_overlay(ax, angles, spider_data.metric, values, lower_bounds, upper_bounds,
+                              zorder_bg=2, zorder_thresholds=10)
+
+    # Configure the axes with labels and title
+    _configure_axes(ax, angles, groups, title)
+
+    fig.tight_layout()
     return fig
 
 
@@ -91,7 +105,7 @@ def _add_cursor_to_spider_plot(sc, canvas, groups, values, lower_bounds, upper_b
     return cursor
 
 
-def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float]) -> PathCollection:
+def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float], *, zorder: Optional[float] = None) -> PathCollection:
     """
     Draw the main series of the spider plot.
 
@@ -101,8 +115,10 @@ def _draw_main_series(ax: plt.Axes, angles: List[float], values: List[float]) ->
 
     :returns: Matplotlib PathCollection object for the scatter points
     """
-    ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2)
-    return ax.scatter(angles, values, marker='o', color='b')
+    ax.plot(angles, values, color='steelblue', linestyle='-', linewidth=2, zorder=zorder)
+    if zorder is not None:
+        zorder -= 0.01
+    return ax.scatter(angles, values, marker='o', color='b', zorder=zorder)
 
 
 def _apply_metric_overlay(
@@ -112,6 +128,9 @@ def _apply_metric_overlay(
     values: List[float],
     lower_bounds: List[float],
     upper_bounds: List[float],
+    *,
+    zorder_bg: Optional[float] = None,
+    zorder_thresholds: Optional[float] = None,
 ) -> None:
     """
     Apply metric-specific overlays to the spider plot.
@@ -127,21 +146,21 @@ def _apply_metric_overlay(
     full_theta = get_full_theta()
     overlay_config = {
         'QWK': {
-            'baseline': {'type': 'line', 'y': 0, 'style': '--', 'color': 'seagreen', 'linewidth': 3, 'alpha': 0.8},
+            'baseline': {'type': 'line', 'y': 0, 'style': '--', 'color': 'seagreen', 'linewidth': 3, 'alpha': 0.5},
             'thresholds': [
                 (lower_bounds, lambda v: v > 0, 'maroon'),
                 (upper_bounds, lambda v: v < 0, 'red'),
             ],
         },
         'EOD': {
-            'fill': {'lo': -0.1, 'hi': 0.1, 'color': 'lightgreen', 'alpha': 0.5},
+            'fill': {'lo': -0.1, 'hi': 0.1, 'color': 'lightgreen', 'alpha': 0.4},
             'thresholds': [
                 (values, lambda v: v > 0.1, 'maroon'),
                 (values, lambda v: v < -0.1, 'red'),
             ],
         },
         'AAOD': {
-            'fill': {'lo': 0, 'hi': 0.1, 'color': 'lightgreen', 'alpha': 0.5},
+            'fill': {'lo': 0, 'hi': 0.1, 'color': 'lightgreen', 'alpha': 0.4},
             'baseline': {'type': 'ylim', 'lo': 0},
             'thresholds': [
                 (values, lambda v: v > 0.1, 'maroon'),
@@ -157,7 +176,7 @@ def _apply_metric_overlay(
         base = cfg['baseline']
         if base['type'] == 'line':
             ax.plot(full_theta, np.full_like(full_theta, base['y']), base['style'],
-                    linewidth=base['linewidth'], alpha=base['alpha'], color=base['color'])
+                    linewidth=base['linewidth'], alpha=base['alpha'], color=base['color'], zorder=zorder_bg)
         elif base['type'] == 'ylim':
             _, ymax = ax.get_ylim()
             ax.set_ylim(base['lo'], ymax)
@@ -165,11 +184,11 @@ def _apply_metric_overlay(
     # Fill region if specified
     if 'fill' in cfg:
         f = cfg['fill']
-        ax.fill_between(full_theta, f['lo'], f['hi'], color=f['color'], alpha=f['alpha'])
+        ax.fill_between(full_theta, f['lo'], f['hi'], color=f['color'], alpha=f['alpha'], zorder=zorder_bg)
 
     # Annotate thresholds
     for data, cond, color in cfg['thresholds']:
-        _annotate(ax, angles, data, cond, color)
+        _annotate(ax, angles, data, cond, color, zorder=zorder_thresholds)
 
 
 def _annotate(
@@ -178,11 +197,13 @@ def _annotate(
     data: List[float],
     condition: Any,
     color: str,
-    delta: float = 0.15,
+    delta: float = 0.05,
+    *,
+    zorder: Optional[float] = None,
 ) -> None:
     """
     Draw small perpendicular line segments at threshold points, scaling
-    their angular span by (ymax - value)/(ymax - ymin).
+    their angular span based on the distance from the y-axis.
     """
     ymin, ymax = ax.get_ylim()
     full_span = ymax - ymin
@@ -190,8 +211,8 @@ def _annotate(
     labels = ax.get_xticklabels()
 
     for i in range(len(data)):
-        val = data[i]
-        if not condition(val):
+        raw_val = data[i]
+        if not condition(raw_val):
             continue
 
         # color the i-th tick label
@@ -200,7 +221,9 @@ def _annotate(
             labels[i].set_color(color)
 
         angle = angles[i]
-        d_angle = delta * (ymax - val) / full_span
+        d_angle = delta * full_span / (raw_val - ymin)
+        # compute radial value so the chord crosses through the true data point
+        r_val = raw_val / math.cos(d_angle)
         start, end = angle - d_angle, angle + d_angle
 
         # handle wrap-around in [0, 2π)
@@ -211,7 +234,7 @@ def _annotate(
             segments.append((start, end))
 
         for a0, a1 in segments:
-            ax.plot([a0, a1], [val, val], color=color, linewidth=2, solid_capstyle='butt')
+            ax.plot([a0, a1], [r_val, r_val], color=color, linewidth=1.3, solid_capstyle='butt', zorder=zorder)
 
 
 def _fill_bounds(
@@ -219,6 +242,8 @@ def _fill_bounds(
     angles: List[float],
     lower_bounds: List[float],
     upper_bounds: List[float],
+    *,
+    zorder: Optional[float] = None,
 ) -> None:
     """
     Fill the area between the lower and upper bounds in the spider plot.
@@ -228,7 +253,7 @@ def _fill_bounds(
     :arg lower_bounds: List of lower bounds for each group
     :arg upper_bounds: List of upper bounds for each group
     """
-    ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2)
+    ax.fill_between(angles, lower_bounds, upper_bounds, color='steelblue', alpha=0.2, zorder=zorder)
 
 
 def _configure_axes(

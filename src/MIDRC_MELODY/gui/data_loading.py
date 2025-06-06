@@ -23,7 +23,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QDialog,
 )
-from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data as build_demo_data
 from MIDRC_MELODY.gui.config_editor import ConfigEditor
 
 
@@ -156,8 +155,3 @@ def edit_config_file(parent):
         editor = ConfigEditor(config, parent=parent)
         if editor.exec() == QDialog.Accepted:
             save_config_dict(config)
-
-
-def build_demo_data_wrapper(config):
-    # Wrap build_demo_data and return the test data
-    return build_demo_data(config)
