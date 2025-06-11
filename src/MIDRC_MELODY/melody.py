@@ -37,12 +37,13 @@ def show_config(path):
 def _launch_gui():
     """Launch the GUI if available."""
     try:
-        from melody_gui import launch_gui
+        from MIDRC_MELODY.melody_gui import launch_gui
     except ImportError as e1:
         try:
-            from MIDRC_MELODY.melody_gui import launch_gui
+            from melody_gui import launch_gui
         except ImportError as e2:
-            e = e2 if str(e1) == "No module named 'melody_gui'" else e1
+            e = e2 if str(e1) == "No module named 'MIDRC_MELODY.melody_gui'" else (
+                str(e1) + "\n" + str(e2) if str(e2) != "No module named 'melody_gui'" else e1)
             print('-' * 50)
             print(f"GUI is not available, import failed with error:\n{e}")
             print('-' * 50)
