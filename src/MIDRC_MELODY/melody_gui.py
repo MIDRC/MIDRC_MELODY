@@ -17,10 +17,12 @@ try:
     from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import QTimer, Qt
     from MIDRC_MELODY.gui.main_window import MainWindow  # Import the custom MainWindow
-except ImportError:
+except ImportError as e:
     raise ImportError("To use the GUI features, please install the package PySide6.\n"
                       "You can install it using the command:\n"
-                      "pip install PySide6\n")
+                      "pip install PySide6\n"
+                      "\n"
+                      "Error details: " + str(e))
 
 
 # Global list to hold window references.

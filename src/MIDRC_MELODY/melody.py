@@ -42,9 +42,10 @@ def _launch_gui():
         try:
             from MIDRC_MELODY.melody_gui import launch_gui
         except ImportError as e2:
-            print(f"GUI is not available, import failed with errors:\n"
-                  f"{e1}\n\n"
-                  f"{e2}")
+            e = e2 if str(e1) == "No module named 'melody_gui'" else e1
+            print('-' * 50)
+            print(f"GUI is not available, import failed with error:\n{e}")
+            print('-' * 50)
             return
     launch_gui()
 
