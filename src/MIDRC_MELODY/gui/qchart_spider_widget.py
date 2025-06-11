@@ -19,9 +19,7 @@ from PySide6.QtCharts import QPolarChart, QLineSeries, QValueAxis, QCategoryAxis
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData  # reuse data class from common module
-from MIDRC_MELODY.gui.grabbablewidget import GrabbableChartView
-
-from src.MIDRC_MELODY.gui.matplotlib_spider_widget import _set_spider_chart_copyable_data
+from MIDRC_MELODY.gui.shared.react.grabbablewidget import GrabbableChartView
 
 
 def _fill_bounds(

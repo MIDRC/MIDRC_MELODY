@@ -19,7 +19,6 @@ This module provides a mixin class for adding snapshot (grab) and save functiona
 
 from typing import Optional
 
-from IPython.utils.terminal import set_term_title
 from PySide6.QtCharts import QChart, QChartView
 from PySide6.QtCore import QDateTime, QDir, QEvent, QObject, QStandardPaths, Qt
 from PySide6.QtGui import QAction, QImage, QPainter

@@ -39,7 +39,7 @@ from MIDRC_MELODY.common.eod_aaod_metrics import (
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
 from MIDRC_MELODY.common.qwk_metrics import create_spider_plot_data_qwk
 
-from MIDRC_MELODY.gui.copyabletableview import CopyableTableWidget
+from MIDRC_MELODY.gui.shared.react.copyabletableview import CopyableTableWidget
 from MIDRC_MELODY.gui.matplotlib_spider_widget import (
     MatplotlibSpiderWidget,
     display_spider_charts_in_tabs_matplotlib as display_spider_charts_in_tabs,

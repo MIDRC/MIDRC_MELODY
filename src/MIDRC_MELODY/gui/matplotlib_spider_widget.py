@@ -30,7 +30,7 @@ from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from MIDRC_MELODY.common.matplotlib_spider import plot_spider_chart
 from MIDRC_MELODY.common.plot_tools import SpiderPlotData
-from MIDRC_MELODY.gui.grabbablewidget import GrabbableWidgetMixin
+from MIDRC_MELODY.gui.shared.react.grabbablewidget import GrabbableWidgetMixin
 
 __all__ = [
     "MatplotlibSpiderWidget",
