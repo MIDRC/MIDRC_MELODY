@@ -20,7 +20,7 @@ from MIDRC_MELODY.common.generate_eod_aaod_spiders import generate_eod_aaod_spid
 from MIDRC_MELODY.common.generate_qwk_spiders import generate_qwk_spiders
 
 try:
-    from melody_gui import launch_gui
+    from PySide6.QtWidgets import QWidget  # noqa: F401
     GUI_AVAILABLE = True
 except ImportError:
     GUI_AVAILABLE = False
@@ -32,6 +32,21 @@ def show_config(path):
         print(open(path, encoding='utf-8').read())
     except Exception as e:
         print(f"Error reading config: {e}")
+
+
+def _launch_gui():
+    """Launch the GUI if available."""
+    try:
+        from melody_gui import launch_gui
+    except ImportError as e1:
+        try:
+            from MIDRC_MELODY.melody_gui import launch_gui
+        except ImportError as e2:
+            print(f"GUI is not available, import failed with errors:\n"
+                  f"{e1}\n\n"
+                  f"{e2}")
+            return
+    launch_gui()
 
 
 def set_config(current_path):
@@ -56,7 +71,7 @@ def main():
               lambda: generate_eod_aaod_spiders(cfg_path=state["config_path"])),
     }
     if GUI_AVAILABLE:
-        commands["3"] = ("Launch GUI", lambda: launch_gui())
+        commands["3"] = ("Launch GUI", lambda: _launch_gui())
     commands["s"] = ("Show current config file contents", lambda: show_config(state["config_path"]))
     commands["f"] = ("Change config file path", lambda: state.update(config_path=set_config(state["config_path"])))
     commands["e"] = ("Edit config file", lambda: edit_config(state["config_path"]))
