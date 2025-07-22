@@ -36,7 +36,7 @@ def generate_qwk_spiders(cfg_path: str = "config.yaml"):
     kappas, intervals = calculate_kappas_and_intervals(test_data)
 
     # Bootstrap delta QWKs
-    print("Bootstrapping delta Kappas, this may take a while", flush=True)
+    print("Bootstrapping ∆κ, this may take a while", flush=True)
     delta_kappas = calculate_delta_kappa(test_data)
 
     # Print the table of non-zero delta Kappas

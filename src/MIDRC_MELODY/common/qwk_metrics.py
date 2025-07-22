@@ -51,7 +51,7 @@ def calculate_kappas_and_intervals(
 
     rng = np.random.default_rng(test_data.base_seed)
     print('-'*50)
-    print("Overall Quadratic Weighted Kappa Scores:")
+    print("Overall Quadratic Weighted Kappa (κ) Scores:")
     for col in ai_cols:
         y_pred = test_data.matched_df[col].to_numpy(dtype=int)
         kappa = cohen_kappa_score(y_true, y_pred, weights='quadratic')
@@ -63,7 +63,7 @@ def calculate_kappas_and_intervals(
             kappa_scores[i] = cohen_kappa_score(y_true[indices], y_pred[indices], weights='quadratic')
         lower_bnd, upper_bnd = np.percentile(kappa_scores, [2.5, 97.5])
         intervals[col] = (lower_bnd, upper_bnd)
-        print(f"Model: {col} | Kappa: {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true)}")
+        print(f"Model: {col} | Kappa (κ): {kappa:.4f} | 95% CI: ({lower_bnd:.4f}, {upper_bnd:.4f}) N: {len(y_true)}")
     print('-'*50)
 
     return kappas, intervals

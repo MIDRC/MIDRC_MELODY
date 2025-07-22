@@ -173,19 +173,19 @@ class MainWindow(QMainWindow):
         toolbar = self.addToolBar("MainToolbar")
         toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
+        # QWK Metrics action
+        qwk_icon = QIcon.fromTheme("accessories-calculator")
+        qwk_act = QAction(qwk_icon, "QWK Metrics", self)  # Use K instead of κ for toolbar in case of font issues
+        qwk_act.setToolTip("Calculate QWκ Metrics")
+        qwk_act.triggered.connect(self.controller.calculate_qwk)
+        toolbar.addAction(qwk_act)
+
         # EOD/AAOD Metrics action
         eod_icon = QIcon.fromTheme(QIcon.ThemeIcon.Computer)
         eod_act = QAction(eod_icon, "EOD/AAOD Metrics", self)
         eod_act.setToolTip("Calculate EOD/AAOD Metrics")
         eod_act.triggered.connect(self.controller.calculate_eod_aaod)
         toolbar.addAction(eod_act)
-
-        # QWK Metrics action
-        qwk_icon = QIcon.fromTheme("accessories-calculator")
-        qwk_act = QAction(qwk_icon, "QWK Metrics", self)
-        qwk_act.setToolTip("Calculate QWK Metrics")
-        qwk_act.triggered.connect(self.controller.calculate_qwk)
-        toolbar.addAction(qwk_act)
 
         # Spacer to push next actions to the right
         spacer = QWidget()
@@ -483,17 +483,17 @@ class MainWindow(QMainWindow):
         table_filtered = self.create_table_widget(headers_delta, filtered_table_data)
 
         # Table of overall kappa metrics
-        headers_kappas = ["Model", "Kappa", "Lower CI", "Upper CI"]
+        headers_kappas = ["Model", "Kappa (κ)", "Lower CI", "Upper CI"]
         table_kappas = self.create_table_widget(headers_kappas, kappas_rows)
 
         # Spider-chart tab for QWK
         charts_tab = self.create_spider_plot_from_qwk(*plot_args)
 
         tabs_dict: Dict[QWidget, str] = {
-            table_kappas: "QWK (95% CI)",
-            table_all: "ΔQWK (95% CI)",
-            table_filtered: "Filtered ΔQWK (95% CI Excludes Zero)",
-            charts_tab: "ΔQWK Spider Charts",
+            table_kappas: "QWκ (95% CI)",
+            table_all: "ΔQWκ (95% CI)",
+            table_filtered: "Filtered ΔQWκ (95% CI Excludes Zero)",
+            charts_tab: "ΔQWκ Spider Charts",
         }
         self.update_tabs(tabs_dict)
 
