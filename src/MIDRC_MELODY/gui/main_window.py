@@ -142,6 +142,8 @@ class MainWindow(QMainWindow):
         self._create_tool_bar()
         self._create_central_widget()
 
+        self.chart_tabs: Dict[str, QTabWidget] = {}  # Store chart tab widgetss by name
+
         # Prepare the progress view (console) as a QPlainTextEdit (hidden by default)
         self.progress_view: QPlainTextEdit = QPlainTextEdit()
         self._ansi_processor: Optional[ANSIProcessor] = None  # Initialized on first use
@@ -314,9 +316,20 @@ class MainWindow(QMainWindow):
         # Insert new tabs at indices starting from 1
         for idx, (widget, title) in enumerate(tab_dict.items(), start=1):
             tabs.insertTab(idx, widget, title)
+            if widget.findChild(MatplotlibSpiderWidget):
+                self.chart_tabs[title] = widget  # Store for later reference
+                widget.currentChanged.connect(self.adjust_chart_tab_indices)
 
         if set_current:
             tabs.setCurrentIndex(1)
+
+    def adjust_chart_tab_indices(self, int):
+        """
+        Adjust the indices of chart tabs when one is changed.
+        """
+        for chart_tab in self.chart_tabs.values():
+            if isinstance(chart_tab, QTabWidget):
+                chart_tab.setCurrentIndex(int)
 
     @staticmethod
     def create_table_widget(
@@ -458,7 +471,7 @@ class MainWindow(QMainWindow):
             "Category",
             "Reference",
             "Group",
-            "Delta Kappa",
+            "Δκ",
             "Lower CI",
             "Upper CI",
         ]
@@ -466,7 +479,8 @@ class MainWindow(QMainWindow):
         table_all = self.create_table_widget(headers_delta, delta_table_data)
 
         # Table of filtered delta-kappa values
-        table_filtered = self.create_table_widget(headers_delta, filtered_rows)
+        filtered_table_data = _add_ref_group(filtered_rows, reference_groups)
+        table_filtered = self.create_table_widget(headers_delta, filtered_table_data)
 
         # Table of overall kappa metrics
         headers_kappas = ["Model", "Kappa", "Lower CI", "Upper CI"]
@@ -476,10 +490,10 @@ class MainWindow(QMainWindow):
         charts_tab = self.create_spider_plot_from_qwk(*plot_args)
 
         tabs_dict: Dict[QWidget, str] = {
-            table_kappas: "Kappas & Intervals",
-            table_all: "All Delta κ Values",
-            table_filtered: "QWK Filtered (CI Excludes Zero)",
-            charts_tab: "QWK Spider Charts",
+            table_kappas: "QWK (95% CI)",
+            table_all: "ΔQWK (95% CI)",
+            table_filtered: "Filtered ΔQWK (95% CI Excludes Zero)",
+            charts_tab: "ΔQWK Spider Charts",
         }
         self.update_tabs(tabs_dict)
 
