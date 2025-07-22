@@ -208,14 +208,14 @@ def print_table_of_nonzero_deltas(
     Print tables for Delta Kappa values, highlighting those with 95% CI excluding zero.
     """
     all_deltas, filtered = _build_delta_tables(delta_kappas)
-    headers = ['Model', 'Category', 'Group', 'Delta Kappa', 'Lower CI', 'Upper CI']
+    headers = ['Model', 'Category', 'Group', 'Δκ', 'Lower CI', 'Upper CI']
 
-    _print_section('All Delta Kappa Values:', all_deltas, headers, tablefmt)
+    _print_section('All Δκ Values:', all_deltas, headers, tablefmt)
 
     if filtered:
-        _print_section('Delta Kappa values with 95% CI excluding zero:', filtered, headers, tablefmt)
+        _print_section('Δκ values with 95% CI excluding zero:', filtered, headers, tablefmt)
     else:
-        print('No model/group combinations meeting the specified criteria for Delta Kappa.')
+        print('No model/group combinations meeting the specified criteria for Δκ.')
 
 
 try:
