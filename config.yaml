@@ -1,0 +1,42 @@
+#  Copyright (c) 2025 Medical Imaging and Data Resource Center (MIDRC).
+
+input data:
+  truth file: data/demo_truthNdemographics.csv
+  test scores: data/demo_scores.csv
+  uid column: case_name
+  truth column: truth
+
+# Values >= to the binary threshold are considered positive
+binary threshold: 4
+min count per category: 10
+  
+bootstrap:
+  iterations: 1000
+  seed: 42  # Set to null to use random entropy
+
+output:
+  qwk:
+    save: true
+    file prefix: output/delta_kappas_
+  eod:
+    save: true
+    file prefix: output/eod_
+  aaod:
+    save: true
+    file prefix: output/aaod_
+
+numeric_cols:
+  age_binned:
+    raw column: age
+    bins: [ 0, 18, 30, 40, 50, 65, 75, 85, .inf ]
+    labels: ['<18', '18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+']
+
+plot:
+  custom_orders:
+    age_binned: [ '18-29', '30-39', '40-49', '50-64', '65-74', '75-84', '85+' ]
+    race: [ 'White', 'Asian', 'Black or African American', 'Other' ]
+    ethnicity: [ 'Hispanic or Latino', 'Not Hispanic or Latino' ]
+    intersectional_race_ethnicity: [ 'White', 'Not White or Hisapanic or Latino' ]
+    sex: [ 'Male', 'Female' ]
+  clockwise: true  # Set this to true to rotate Clockwise instead of Counter-Clockwise
+  start: top  # Options: top, bottom, left, right, t, b, l, r

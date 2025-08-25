@@ -1,0 +1,33 @@
+[project]
+name = "MIDRC_MELODY"
+version = "0.2.0"
+dependencies = [
+    "pandas",
+    "matplotlib",
+    "numpy",
+    "scikit-learn",
+    "PyYAML",
+    "joblib",
+    "tqdm",
+    "tabulate",
+    "tqdm-joblib",
+    "mplcursors",
+    "windows-curses; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+gui = [
+    "PySide6>=6.8.0",
+]
+
+[project.scripts]
+melody = "MIDRC_MELODY.melody:main"
+melody-gui = "MIDRC_MELODY.melody_gui:main"
+melody_gui = "MIDRC_MELODY.melody_gui:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
