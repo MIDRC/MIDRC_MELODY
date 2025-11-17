@@ -131,6 +131,15 @@ plot:
 
 > UID values must match between truth and score files.
 
+
+## :book: References
+
+<a id="1">[1]</a> Drukker K, Armato SG III, Hadjiiski LM, Gichoya J, Gruszauskas NP, Kalpathy-Cramer J, Li H, Myers KJ, Tomek RM, Whitney HM, Zhang Z, Giger ML.
+*Machine learning evaluation of pneumonia severity: subgroup performance in the Medical Imaging and Data Resource Center modified radiographic assessment of lung edema mastermind challenge.*
+J Med Imaging (Bellingham). 2025 Oct;12(5):054502.
+[doi: 10.1117/1.JMI.12.5.054502](https://doi.org/10.1117/1.JMI.12.5.054502). Epub 2025 Oct 7. PMID: 41064474; PMCID: PMC12503059.
+
+
 ## License
 
 Distributed under the Apache 2.0 License.
