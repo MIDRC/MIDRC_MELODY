@@ -1,6 +1,6 @@
 [project]
 name = "MIDRC_MELODY"
-version = "0.2.0"
+version = "0.3.1"
 dependencies = [
     "pandas",
     "matplotlib",
@@ -13,17 +13,26 @@ dependencies = [
     "tqdm-joblib",
     "mplcursors",
     "windows-curses; sys_platform == 'win32'",
-]
-
-[project.optional-dependencies]
-gui = [
     "PySide6>=6.8.0",
 ]
+
+authors = [
+    {name = "Robert Tomek", email = "rtomek@uchicago.edu"},
+]
+description = "MELODY: Model EvaLuation across subgroups for cOnsistent Decision accuracY"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["machine-learning", "model-evaluation", "fairness", "subgroup-analysis"]
 
 [project.scripts]
 melody = "MIDRC_MELODY.melody:main"
 melody-gui = "MIDRC_MELODY.melody_gui:main"
 melody_gui = "MIDRC_MELODY.melody_gui:main"
+
+[project.urls]
+"Homepage" = "https://github.com/MIDRC/MIDRC_MELODY"
+"Issues" = "https://github.com/MIDRC/MIDRC_MELODY/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -18,6 +18,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from joblib import delayed, Parallel
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.utils import resample
@@ -262,7 +263,7 @@ def plot_data_eod_aaod(
     test_cols: List[str],
     metrics: List[str] = ('eod', 'aaod'),
     base_plot_data: Optional[SpiderPlotData] = None,
-) -> Dict[str, List[Any]]:
+) -> Dict[str, List[plt.Figure]]:
     """
     Plot EOD and AAOD spider charts for each model.
 
@@ -280,7 +281,12 @@ def plot_data_eod_aaod(
         fig = plot_spider_chart(plot_data)
         figures_dict[plot_data.metric].append(fig)
 
+    grid_figs = []
     for figures in figures_dict.values():
-        display_figures_grid(figures)
+        grid_fig = display_figures_grid(figures)
+        grid_figs.append(grid_fig)
+
+    # all_figs = [fig for figs in figures_dict.values() for fig in figs] + [g for g in grid_figs if g is not None]
+
 
     return figures_dict

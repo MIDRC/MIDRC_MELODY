@@ -17,6 +17,7 @@
 from dataclasses import replace
 
 import matplotlib.pyplot as plt
+from pylab import get_current_fig_manager
 import yaml
 
 from MIDRC_MELODY.common.data_loading import build_test_and_demographic_data, save_pickled_data

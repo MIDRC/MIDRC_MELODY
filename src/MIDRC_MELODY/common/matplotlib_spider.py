@@ -18,6 +18,7 @@ from typing import List, Tuple, Any, Optional
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.collections import PathCollection
 import mplcursors
 
@@ -280,34 +281,145 @@ def _configure_axes(
 
 def figure_to_image(fig: plt.Figure) -> np.ndarray:
     """
-    Convert a Matplotlib figure to a numpy array.
+    Convert a Matplotlib figure to a numpy array, robust against:
+    - interactive canvases vs Agg canvas APIs
+    - HiDPI / device-pixel-ratio scaling (buffer larger than reported w*h)
+    - swapped width/height reports
 
     :arg fig: Matplotlib figure object
 
-    :returns: Numpy array representing the figure
+    :returns: An (H, W, 3) uint8 RGB array.
     """
-    fig.canvas.draw()
-    w, h = fig.canvas.get_width_height()
-    buf = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
-    buf = buf.reshape(h, w, 4)
-    return buf[:, :, 1:4]
+    # Prefer the figure's existing canvas so we don't reattach an Agg canvas
+    canvas = getattr(fig, "canvas", None)
 
+    def _try_shape(buf1d: np.ndarray, w: int, h: int) -> Optional[np.ndarray]:
+        # buf1d is a 1-D uint8 view; try to infer correct (h, w, 4) layout
+        total_bytes = buf1d.size
+        if total_bytes % 4 != 0:
+            return None
+        pixels = total_bytes // 4
+        expected = w * h
 
-def display_figures_grid(figures: List[plt.Figure], n_cols: int = 3) -> None:
+        # exact match
+        if pixels == expected:
+            try:
+                arr = buf1d.reshape((h, w, 4))
+                return arr
+            except Exception:
+                pass
+
+        # try swapped w/h if caller reported them reversed
+        if pixels == (h * w):
+            try:
+                arr = buf1d.reshape((w, h, 4))
+                return arr
+            except Exception:
+                pass
+
+        # try integer scale factor (HiDPI / retina): pixels == expected * scale^2
+        scale2 = pixels / expected if expected else 0
+        if scale2 >= 1:
+            scale = int(round(math.sqrt(scale2)))
+            if scale > 0 and scale * scale == int(scale2):
+                try:
+                    arr = buf1d.reshape((h * scale, w * scale, 4))
+                    return arr
+                except Exception:
+                    pass
+
+        # nothing matched
+        return None
+
+    # 1) Prefer native buffer_rgba() if available (gives RGBA-like buffer)
+    if canvas is not None:
+        try:
+            canvas.draw()
+        except Exception:
+            pass
+
+        if hasattr(canvas, "buffer_rgba"):
+            try:
+                raw = canvas.buffer_rgba()
+                if isinstance(raw, np.ndarray):
+                    arr = raw
+                else:
+                    arr = np.frombuffer(raw, dtype=np.uint8)
+                    w, h = canvas.get_width_height()
+                    maybe = _try_shape(arr, w, h)
+                    if maybe is not None:
+                        arr = maybe
+                    else:
+                        # if buffer_rgba returned already shaped (h,w,4) as flat bytes,
+                        # try reshaping by interpreting raw length / 4
+                        arr = arr.reshape((-1, 4))  # fallback to something shaped
+                # at this point arr may be shaped (h,w,4) or (N,4)
+                if arr.ndim == 3 and arr.shape[2] == 4:
+                    # assume RGBA ordering -> keep RGB channels
+                    rgb = arr[:, :, :3].copy()
+                    return rgb
+                elif arr.ndim == 2 and arr.shape[1] == 4:
+                    # try to infer width/height from get_width_height
+                    w, h = canvas.get_width_height()
+                    maybe = _try_shape(arr.ravel(), w, h)
+                    if maybe is not None:
+                        return maybe[:, :, 1:4][:, :, ::-1]
+                # fall through to other strategies if ambiguous
+            except Exception:
+                pass
+
+        # 2) Fallback to tostring_argb() path when available and try to infer shape / scale
+        if hasattr(canvas, "tostring_argb"):
+            try:
+                raw = canvas.tostring_argb()
+                buf = np.frombuffer(raw, dtype=np.uint8)
+                w, h = canvas.get_width_height()
+                arr = _try_shape(buf, w, h)
+                if arr is not None:
+                    # keep original behavior for ARGB -> RGB conversion
+                    return arr[:, :, 1:4][:, :, ::-1]
+            except Exception:
+                pass
+
+    # 3) Last resort: paint to a temporary Agg canvas (does not modify existing interactive canvas)
+    try:
+        agg = FigureCanvas(fig)
+        agg.draw()
+        w, h = agg.get_width_height()
+        buf = np.frombuffer(agg.tostring_argb(), dtype=np.uint8)
+        buf = buf.reshape(h, w, 4)
+        return buf[:, :, 1:4][:, :, ::-1]
+    except Exception as exc:
+        raise RuntimeError(f"Failed to convert figure to image: {exc}")
+
+def display_figures_grid(
+    figures: List[plt.Figure],
+    n_cols: int = 3,
+    *,
+    anchor_fig: Optional[plt.Figure] = None,
+    anchor_index: int = 0,
+) -> None:
     """
     Display a grid of: figures in a single plot.
 
     :arg figures: List of Matplotlib figure objects
     :arg n_cols: Number of columns in the grid
     """
+    if not figures:
+        return
+
     n_figs = len(figures)
     n_rows = int(np.ceil(n_figs / n_cols))
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(8 * n_cols, 8 * n_rows))
-    axes = np.array(axes).flatten()
+    grid_fig, axes = plt.subplots(n_rows, n_cols, figsize=(8 * n_cols, 8 * n_rows))
+    axes = np.array(axes).reshape(-1)
+
     for i, f in enumerate(figures):
         img = figure_to_image(f)
         axes[i].imshow(img)
         axes[i].axis('off')
+        # plt.close(f)
+
     for ax in axes[n_figs:]:
         ax.remove()
-    plt.tight_layout()
+
+    grid_fig.tight_layout()
