@@ -1,6 +1,6 @@
 [project]
 name = "MIDRC_MELODY"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
     "pandas",
     "matplotlib",
@@ -36,6 +36,9 @@ melody_gui = "MIDRC_MELODY.melody_gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"MIDRC_MELODY" = ["resources/*"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
