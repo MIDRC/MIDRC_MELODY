@@ -138,7 +138,7 @@ class ConfigEditor(QDialog):
             row_layout.addWidget(le)
             output_layout.addRow(QLabel(subcat.capitalize()), row_widget)
             self.output_widgets[subcat] = (cb, le)
-        self.tab_widget.addTab(output_tab, "Output")
+        self.tab_widget.addTab(output_tab, "Pickle (.pkl) Output")
 
     def setup_plots_tab(self):
         plots_tab = QWidget()
