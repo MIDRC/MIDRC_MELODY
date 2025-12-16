@@ -38,14 +38,11 @@ The tool supports two types of evaluation:
 ## Installation
 
 ```bash
-# Install in editable/development mode
+# Standard console install from PyPI
+pip install midrc-melody
+
+# (Alternative) Install in editable/development mode from source code
 pip install -e .
-
-# (Alternative) Minimal console install from PyPI
-# pip install midrc-melody
-
-# With GUI support
-pip install -e .[gui]
 ```
 
 ## Quick Start
@@ -54,7 +51,7 @@ pip install -e .[gui]
 # Run analysis (reads default config.yaml in current directory)
 melody
 
-# Launch the GUI (requires the [gui] extra)
+# Launch the GUI
 melody_gui
 ```
 
@@ -73,15 +70,7 @@ Running `melody` opens a **Command‑Line Interface (CLI)**, which presents a te
 
 ## GUI (Optional)
 
-Launching the graphical interface only requires that PySide6 is installed. If you used the `[gui]` extra, the `melody_gui` command is available; otherwise you can still install PySide6 manually.
-
-```bash
-# If not already using editable install:
-# pip install -e .[gui]
-
-# or, if you already have the console-only install:
-pip install PySide6
-```
+Launching the graphical interface only requires that PySide6 is installed. If you used pip, the `melody_gui` command is available.
 
 ```bash
 # Launch the GUI:

@@ -62,14 +62,26 @@ class ConfigEditor(QDialog):
         input_tab = QWidget()
         input_layout = QFormLayout(input_tab)
         for key, value in self.config.get("input data", {}).items():
+            hbox = QHBoxLayout()
             le = QLineEdit(str(value))
             self.input_edits[key] = le
-            input_layout.addRow(QLabel(key), le)
+            hbox.addWidget(le)
+            if key in ['truth file', 'test scores']:
+                browse_btn = QPushButton("Browse")
+                browse_btn.clicked.connect(lambda _, le=le: self.browse_file(le))
+                hbox.addWidget(browse_btn)
+            input_layout.addRow(QLabel(key), hbox)
         numeric = self.config.get("numeric_cols", {})
         numeric_str = "\n".join(f"{k}: {v}" for k, v in numeric.items())
         self.numeric_edit = QLineEdit(numeric_str)
         input_layout.addRow(QLabel("numeric_cols"), self.numeric_edit)
         self.tab_widget.addTab(input_tab, "Input")
+
+    def browse_file(self, line_edit: QLineEdit):
+        from PySide6.QtWidgets import QFileDialog
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select File", "", "All Files (*)")
+        if file_path:
+            line_edit.setText(file_path)
 
     def setup_calculations_tab(self):
         self.calc_edits = {}
